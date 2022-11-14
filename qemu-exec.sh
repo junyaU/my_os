@@ -4,8 +4,10 @@ export PATH=/usr/local/Cellar/dosfstools/4.2/sbin:$PATH
 export PATH=/usr/local/opt/llvm/bin:$PATH
 
 # ブートローダのビルド
-source ~/edk2/edksetup.sh
-~/edk2/build
+cd ~/edk2
+source edksetup.sh
+Build
+cd ~/
 
 # カーネルのビルド
 # source ~/osbook/devenv/buildenv.sh
@@ -33,6 +35,5 @@ mv ~/mnt/EFI/BOOT/Loader.efi ~/mnt/EFI/BOOT/BOOTX64.EFI
 hdiutil detach mnt
 
 # 実行
-qemu-system-x86_64 -m 1G -drive if=pflash,format=raw,file=OVMF_CODE.fd -drive if=pflash,format=raw,file=OVMF_VARS.fd -drive if=ide,index=0,media=disk,format=raw,file=disk.img -device nec-usb-xhci,id=xhci -device usb-mouse -device usb-kbd 
-
+qemu-system-x86_64 -m 1G -drive if=pflash,format=raw,file=OVMF_CODE.fd -drive if=pflash,format=raw,file=OVMF_VARS.fd -drive if=ide,index=0,media=disk,format=raw,file=disk.img -device nec-usb-xhci,id=xhci -device usb-mouse -device usb-kbd -monitor stdio
 
