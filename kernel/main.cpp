@@ -6,8 +6,9 @@
 #include "drawing.hpp"
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
+#include "memory_map.hpp"
 
-void *operator new(size_t size, void *buf) { return buf; }
+void *operator new(size_t size, void *buf) noexcept { return buf; }
 
 void operator delete(void *obj) noexcept {}
 
@@ -34,7 +35,8 @@ int printk(const char format[], ...) {
     return result;
 }
 
-extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
+extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config,
+                           const MemoryMap memory_map) {
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             screen_drawer = new (screen_drawer_buffer)
@@ -55,8 +57,29 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config) {
     console =
         new (console_buf) Console{*screen_drawer, {0, 0, 0}, {255, 255, 255}};
 
-    for (int i = 0; i < 27; ++i) {
-        printk("printk: %d\n", i);
+    const std::array available_memory_types{
+        MemoryType::kEfiBootServicesCode,
+        MemoryType::kEfiBootServicesData,
+        MemoryType::kEfiConventionalMemory,
+    };
+
+    printk("memory_map: %p\n", &memory_map);
+
+    uintptr_t memory_map_base_address =
+        reinterpret_cast<uintptr_t>(memory_map.buffer);
+
+    for (; memory_map_base_address <
+           memory_map_base_address + memory_map.map_size;
+         memory_map_base_address += memory_map.descriptor_size) {
+        auto descriptor =
+            reinterpret_cast<MemoryDescriptor *>(memory_map_base_address);
+        for (int i = 0; i < available_memory_types.size(); ++i) {
+            // if (descriptor->type != available_memory_types[i]) {
+            //     continue;
+            // }
+
+            printk("type = %u\n", descriptor->type);
+        }
     }
 
     while (1) __asm__("hlt");
