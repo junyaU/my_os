@@ -1,3 +1,4 @@
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -8,7 +9,7 @@
 #include "frame_buffer_config.hpp"
 #include "memory_map.hpp"
 
-void *operator new(size_t size, void *buf) noexcept { return buf; }
+// void *operator new(size_t size, void *buf) noexcept { return buf; }
 
 void operator delete(void *obj) noexcept {}
 
@@ -25,8 +26,6 @@ const char mouse_cursor_shape[mouse_cursor_height][mouse_cursor_width + 1] = {
     "@....@@.@      ", "@...@ @.@      ", "@..@   @.@     ", "@.@    @.@     ",
     "@@      @.@    ", "@       @.@    ", "         @.@   ", "         @@@   ",
 };
-
-// const mouse_cursor_shape
 
 char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
 ScreenDrawer *screen_drawer;
@@ -51,8 +50,14 @@ int printk(const char format[], ...) {
     return result;
 }
 
-extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config,
-                           const MemoryMap memory_map) {
+alignas(16) uint8_t kernel_main_stack[1024 * 1024];
+
+extern "C" void KernelMainNewStack(
+    const FrameBufferConfig &frame_buffer_config_ref,
+    const MemoryMap &memory_map_ref) {
+    FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
+    MemoryMap memory_map{memory_map_ref};
+
     switch (frame_buffer_config.pixel_format) {
         case kPixelRGBResv8BitPerColor:
             screen_drawer = new (screen_drawer_buffer)
@@ -69,24 +74,45 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config,
 
     FillRectangle(*screen_drawer, {0, 0}, {frame_width, frame_height - 50},
                   desktop_bg_color);
+    // FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width, 50},
+    //               {1, 8, 17});
     FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width, 50},
-                  {1, 8, 17});
-    FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width / 5, 50},
                   {80, 80, 80});
-    DrawRectangle(*screen_drawer, {10, frame_height - 40}, {30, 30},
-                  {160, 160, 160});
 
-    console =
-        new (console_buf) Console{*screen_drawer, {0, 0, 0}, {255, 255, 255}};
+    console = new (console_buf)
+        Console{*screen_drawer, {255, 255, 255}, {255, 255, 255}};
 
-    printk("printk: %s\n", "yorodesu");
+    // for (int dy = 0; dy < mouse_cursor_height; ++dy) {
+    //     for (int dx = 0; dx < mouse_cursor_width; ++dx) {
+    //         if (mouse_cursor_shape[dy][dx] == '@') {
+    //             screen_drawer->Draw(200 + dx, 100 + dy, {0, 0, 0});
+    //         } else if (mouse_cursor_shape[dy][dx] == '.') {
+    //             screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
+    //         }
+    //     }
+    // }
 
-    for (int dy = 0; dy < mouse_cursor_height; ++dy) {
-        for (int dx = 0; dx < mouse_cursor_width; ++dx) {
-            if (mouse_cursor_shape[dy][dx] == '@') {
-                screen_drawer->Draw(200 + dx, 100 + dy, {0, 0, 0});
-            } else if (mouse_cursor_shape[dy][dx] == '.') {
-                screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
+    const std::array available_memory_types{
+        MemoryType::kEfiBootServicesCode,
+        MemoryType::kEfiBootServicesData,
+        MemoryType::kEfiConventionalMemory,
+    };
+
+    printk("memory_map: %p\n", &memory_map);
+    uintptr_t map_base_addr = reinterpret_cast<uintptr_t>(memory_map.buffer);
+    for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
+         iter < map_base_addr + memory_map.map_size;
+         iter += memory_map.descriptor_size) {
+        auto descriptor = reinterpret_cast<MemoryDescriptor *>(iter);
+        for (int i = 0; i < available_memory_types.size(); ++i) {
+            if (descriptor->type == available_memory_types[i]) {
+                printk(
+                    "type = %u, phys = %08lx - %08lx, pages = %lu, attr = "
+                    "%08lx\n",
+                    descriptor->type, descriptor->physical_start,
+                    descriptor->physical_start +
+                        descriptor->number_of_pages * 4096 - 1,
+                    descriptor->number_of_pages, descriptor->attribute);
             }
         }
     }

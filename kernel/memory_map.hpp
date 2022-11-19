@@ -45,4 +45,12 @@ inline bool operator==(uint32_t lhs, MemoryType rhs) {
 
 inline bool operator==(MemoryType lhs, uint32_t rhs) { return rhs == lhs; }
 
+inline bool IsAvailable(MemoryType type) {
+    return type == MemoryType::kEfiBootServicesCode ||
+           type == MemoryType::kEfiBootServicesData ||
+           type == MemoryType::kEfiConventionalMemory;
+}
+
+const int kUEFIPageSize = 4096;
+
 #endif
