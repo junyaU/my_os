@@ -36,4 +36,5 @@ hdiutil detach mnt
 
 # 実行
 qemu-system-x86_64 -m 1G -drive if=pflash,format=raw,file=OVMF_CODE.fd -drive if=pflash,format=raw,file=OVMF_VARS.fd -drive if=ide,index=0,media=disk,format=raw,file=disk.img
+cd ~/my_os
 

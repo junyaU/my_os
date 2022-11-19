@@ -21,11 +21,14 @@ void Console::PutString(const char* s) {
             continue;
         }
 
-        WriteAscii(drawer_, FONT_HORIZONTAL_PIXELS * cursor_column_,
-                   FONT_VERTICAL_PIXELS * cursor_column_, *s, fg_color_);
+        if (cursor_column_ < columuns - 1) {
+            WriteAscii(drawer_, FONT_HORIZONTAL_PIXELS * cursor_column_,
+                       FONT_VERTICAL_PIXELS * cursor_row_, *s, fg_color_);
 
-        buffer_[cursor_row_][cursor_column_] = *s;
-        ++cursor_column_;
+            buffer_[cursor_row_][cursor_column_] = *s;
+            ++cursor_column_;
+        }
+
         ++s;
     }
 }

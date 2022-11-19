@@ -303,10 +303,12 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
             Halt();
     }
 
+    // カーネルファイルの位置
     EFI_PHYSICAL_ADDRESS entry_offset = 24;
     UINT64 kernel_entry_address =
         *(UINT64 *)(kernel_first_addrress + entry_offset);
 
+    // 引数にメモリマップを渡してカーネルを実行！
     typedef void __attribute__((sysv_abi))
     EntryPointType(const struct FrameBufferConfig *, const struct MemoryMap *);
     ((EntryPointType *)kernel_entry_address)(&config, &memory_map);

@@ -57,30 +57,9 @@ extern "C" void KernelMain(const FrameBufferConfig &frame_buffer_config,
     console =
         new (console_buf) Console{*screen_drawer, {0, 0, 0}, {255, 255, 255}};
 
-    const std::array available_memory_types{
-        MemoryType::kEfiBootServicesCode,
-        MemoryType::kEfiBootServicesData,
-        MemoryType::kEfiConventionalMemory,
-    };
-
-    printk("memory_map: %p\n", &memory_map);
-
-    uintptr_t memory_map_base_address =
-        reinterpret_cast<uintptr_t>(memory_map.buffer);
-
-    for (; memory_map_base_address <
-           memory_map_base_address + memory_map.map_size;
-         memory_map_base_address += memory_map.descriptor_size) {
-        auto descriptor =
-            reinterpret_cast<MemoryDescriptor *>(memory_map_base_address);
-        for (int i = 0; i < available_memory_types.size(); ++i) {
-            // if (descriptor->type != available_memory_types[i]) {
-            //     continue;
-            // }
-
-            printk("type = %u\n", descriptor->type);
-        }
-    }
+    // for (int i = 0; i < 27; ++i) {
+    printk("printk: %s\n", "yorodesu");
+    // }
 
     while (1) __asm__("hlt");
 }
