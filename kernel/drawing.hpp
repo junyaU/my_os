@@ -35,3 +35,14 @@ class BGR8BitScreenDrawer : public ScreenDrawer {
 
     virtual void Draw(int x, int y, const PixelColor &c) override;
 };
+
+template <typename T>
+struct Vector2D {
+    T x, y;
+};
+
+void FillRectangle(ScreenDrawer &drawer, const Vector2D<int> &position,
+                   const Vector2D<int> &area, const PixelColor &c);
+
+void DrawRectangle(ScreenDrawer &drawer, const Vector2D<int> &position,
+                   const Vector2D<int> &area, const PixelColor &c);
