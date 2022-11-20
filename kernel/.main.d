@@ -33,5 +33,5 @@ main.o: main.cpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
-  console.hpp drawing.hpp frame_buffer_config.hpp font.hpp \
-  memory_map.hpp
+  asmfunc.h console.hpp drawing.hpp frame_buffer_config.hpp font.hpp \
+  memory_map.hpp segment.hpp x86_descriptor.hpp

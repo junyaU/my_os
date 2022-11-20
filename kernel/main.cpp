@@ -3,11 +3,13 @@
 #include <cstdint>
 #include <cstdio>
 
+#include "asmfunc.h"
 #include "console.hpp"
 #include "drawing.hpp"
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
 #include "memory_map.hpp"
+#include "segment.hpp"
 
 // void *operator new(size_t size, void *buf) noexcept { return buf; }
 
@@ -82,15 +84,12 @@ extern "C" void KernelMainNewStack(
     console = new (console_buf)
         Console{*screen_drawer, {255, 255, 255}, {255, 255, 255}};
 
-    // for (int dy = 0; dy < mouse_cursor_height; ++dy) {
-    //     for (int dx = 0; dx < mouse_cursor_width; ++dx) {
-    //         if (mouse_cursor_shape[dy][dx] == '@') {
-    //             screen_drawer->Draw(200 + dx, 100 + dy, {0, 0, 0});
-    //         } else if (mouse_cursor_shape[dy][dx] == '.') {
-    //             screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
-    //         }
-    //     }
-    // }
+    SetupSegments();
+
+    const uint16_t kernel_cs = 1 << 3;
+    const uint16_t kernel_ss = 2 << 3;
+    SetDSAll(0);
+    SetCSSS(kernel_cs, kernel_ss);
 
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
