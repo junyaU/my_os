@@ -1,4 +1,4 @@
-main.o: main.cpp \
+segment.o: segment.cpp segment.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
@@ -31,7 +31,4 @@ main.o: main.cpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/_ansi.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/functional \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
-  asmfunc.h console.hpp drawing.hpp frame_buffer_config.hpp font.hpp \
-  memory_map.hpp paging.hpp segment.hpp x86_descriptor.hpp
+  x86_descriptor.hpp asmfunc.h

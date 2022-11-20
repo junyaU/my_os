@@ -9,6 +9,7 @@
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
 #include "memory_map.hpp"
+#include "paging.hpp"
 #include "segment.hpp"
 
 // void *operator new(size_t size, void *buf) noexcept { return buf; }
@@ -76,8 +77,7 @@ extern "C" void KernelMainNewStack(
 
     FillRectangle(*screen_drawer, {0, 0}, {frame_width, frame_height - 50},
                   desktop_bg_color);
-    // FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width, 50},
-    //               {1, 8, 17});
+
     FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width, 50},
                   {80, 80, 80});
 
@@ -90,6 +90,9 @@ extern "C" void KernelMainNewStack(
     const uint16_t kernel_ss = 2 << 3;
     SetDSAll(0);
     SetCSSS(kernel_cs, kernel_ss);
+
+    // メモリのページング設定
+    SetupIdentityPageTable();
 
     const std::array available_memory_types{
         MemoryType::kEfiBootServicesCode,
