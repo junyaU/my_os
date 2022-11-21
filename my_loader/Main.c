@@ -308,10 +308,10 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
     UINT64 kernel_entry_address =
         *(UINT64 *)(kernel_first_addrress + entry_offset);
 
-    // 引数にメモリマップを渡してカーネルを実行！
+    // 引数にメモリマップを渡してカーネルを実行
     typedef void __attribute__((sysv_abi))
-    EntryPointType(const struct FrameBufferConfig *, const struct MemoryMap *);
-    ((EntryPointType *)kernel_entry_address)(&config, &memory_map);
+    KernelEntryPoint(const struct FrameBufferConfig *, const struct MemoryMap *);
+    ((KernelEntryPoint *)kernel_entry_address)(&config, &memory_map);
 
     Print(L"All done\n");
     while (1)
