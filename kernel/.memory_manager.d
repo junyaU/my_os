@@ -1,11 +1,6 @@
-port.o: usb/xhci/port.cpp usb/xhci/port.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
-  error.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+memory_manager.o: memory_manager.cpp memory_manager.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstddef \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/version \
@@ -14,6 +9,8 @@ port.o: usb/xhci/port.cpp usb/xhci/port.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__debug \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/iterator \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
@@ -34,13 +31,6 @@ port.o: usb/xhci/port.cpp usb/xhci/port.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/_ansi.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/functional \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
-  usb/xhci/registers.hpp register.hpp usb/xhci/xhci.hpp \
-  usb/xhci/context.hpp usb/endpoint.hpp usb/xhci/ring.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/vector \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/climits \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
-  usb/memory.hpp usb/xhci/trb.hpp usb/xhci/devmgr.hpp \
-  usb/xhci/device.hpp usb/device.hpp usb/setupdata.hpp usb/arraymap.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/optional
+  error.hpp \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h

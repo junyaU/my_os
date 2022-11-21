@@ -8,6 +8,7 @@
 #include "drawing.hpp"
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
+#include "memory_manager.hpp"
 #include "memory_map.hpp"
 #include "paging.hpp"
 #include "segment.hpp"
@@ -17,24 +18,15 @@
 void operator delete(void *obj) noexcept {}
 
 const PixelColor desktop_bg_color{45, 118, 237};
-const PixelColor desktop_fg_color{255, 255, 255};
-
-const int mouse_cursor_width = 15;
-const int mouse_cursor_height = 24;
-const char mouse_cursor_shape[mouse_cursor_height][mouse_cursor_width + 1] = {
-    "@              ", "@@             ", "@.@            ", "@..@           ",
-    "@...@          ", "@....@         ", "@.....@        ", "@......@       ",
-    "@.......@      ", "@........@     ", "@.........@    ", "@..........@   ",
-    "@...........@  ", "@............@ ", "@......@@@@@@@@", "@......@       ",
-    "@....@@.@      ", "@...@ @.@      ", "@..@   @.@     ", "@.@    @.@     ",
-    "@@      @.@    ", "@       @.@    ", "         @.@   ", "         @@@   ",
-};
 
 char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
 ScreenDrawer *screen_drawer;
 
 char console_buf[sizeof(Console)];
 Console *console;
+
+char memory_manager_buffer[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager *memory_manager;
 
 extern "C" void __cxa_pure_virtual() {
     while (1) __asm__("hlt");
@@ -94,30 +86,36 @@ extern "C" void KernelMainNewStack(
     // メモリのページング設定
     SetupIdentityPageTable();
 
-    const std::array available_memory_types{
-        MemoryType::kEfiBootServicesCode,
-        MemoryType::kEfiBootServicesData,
-        MemoryType::kEfiConventionalMemory,
-    };
+    ::memory_manager = new (memory_manager_buffer) BitmapMemoryManager;
+    const auto memory_map_base_address =
+        reinterpret_cast<uintptr_t>(memory_map.buffer);
 
-    printk("memory_map: %p\n", &memory_map);
-    uintptr_t map_base_addr = reinterpret_cast<uintptr_t>(memory_map.buffer);
-    for (uintptr_t iter = reinterpret_cast<uintptr_t>(memory_map.buffer);
-         iter < map_base_addr + memory_map.map_size;
+    uintptr_t available_end = 0;
+    for (uintptr_t iter = memory_map_base_address;
+         iter < memory_map_base_address + memory_map.map_size;
          iter += memory_map.descriptor_size) {
-        auto descriptor = reinterpret_cast<MemoryDescriptor *>(iter);
-        for (int i = 0; i < available_memory_types.size(); ++i) {
-            if (descriptor->type == available_memory_types[i]) {
-                printk(
-                    "type = %u, phys = %08lx - %08lx, pages = %lu, attr = "
-                    "%08lx\n",
-                    descriptor->type, descriptor->physical_start,
-                    descriptor->physical_start +
-                        descriptor->number_of_pages * 4096 - 1,
-                    descriptor->number_of_pages, descriptor->attribute);
-            }
+        auto descriptor = reinterpret_cast<const MemoryDescriptor *>(iter);
+        if (available_end < descriptor->physical_start) {
+            memory_manager->MarkAllocated(
+                FrameID{available_end / kBytesPerFrame},
+                (descriptor->physical_start - available_end) / kBytesPerFrame);
+        }
+
+        const auto physical_end_address =
+            descriptor->physical_start +
+            descriptor->number_of_pages * kUEFIPageSize;
+
+        if (IsAvailable(static_cast<MemoryType>(descriptor->type))) {
+            available_end = physical_end_address;
+        } else {
+            memory_manager->MarkAllocated(
+                FrameID{descriptor->physical_start / kBytesPerFrame},
+                descriptor->number_of_pages * kUEFIPageSize / kBytesPerFrame);
         }
     }
+
+    memory_manager->SetMemoryRange(FrameID{1},
+                                   FrameID{available_end / kBytesPerFrame});
 
     while (1) __asm__("hlt");
 }
