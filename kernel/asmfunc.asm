@@ -52,3 +52,16 @@ global SetCR3
 SetCR3:
     mov cr3, rdi
     ret
+
+global InOut32 ; void InOut32(uint16_t addr, uint32_t data);
+InOut32:
+    mov dx, di ; di = addr
+    mov eax, esi ; esi = data
+    out dx, eax
+    ret
+
+global IoIn32 ; uint32_t IoIn32(uint16_t addr)
+IoIn32:
+    mov dx, di ; di = addr
+    in eax, dx
+    ret

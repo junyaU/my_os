@@ -19,6 +19,18 @@ void operator delete(void *obj) noexcept {}
 
 const PixelColor desktop_bg_color{45, 118, 237};
 
+const int kMouseCursorWidth = 15;
+const int kMouseCursorHeight = 24;
+
+const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
+    "@              ", "@@             ", "@.@            ", "@..@           ",
+    "@...@          ", "@....@         ", "@.....@        ", "@......@       ",
+    "@.......@      ", "@........@     ", "@.........@    ", "@..........@   ",
+    "@...........@  ", "@............@ ", "@......@@@@@@@@", "@......@       ",
+    "@....@@.@      ", "@...@ @.@      ", "@..@   @.@     ", "@.@    @.@     ",
+    "@@      @.@    ", "@       @.@    ", "         @.@   ", "         @@@   ",
+};
+
 char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
 ScreenDrawer *screen_drawer;
 
@@ -116,6 +128,16 @@ extern "C" void KernelMainNewStack(
 
     memory_manager->SetMemoryRange(FrameID{1},
                                    FrameID{available_end / kBytesPerFrame});
+
+    for (int dy = 0; dy < kMouseCursorHeight; ++dy) {
+        for (int dx = 0; dx < kMouseCursorWidth; ++dx) {
+            if (mouse_cursor_shape[dy][dx] == '@') {
+                screen_drawer->Draw(200 + dx, 100 + dy, {0, 0, 0});
+            } else if (mouse_cursor_shape[dy][dx] == '.') {
+                screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
+            }
+        }
+    }
 
     while (1) __asm__("hlt");
 }
