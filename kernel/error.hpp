@@ -57,6 +57,8 @@ class Error {
     static_assert(Error::Code::kLastOfCode == code_names_.size());
 
    public:
+    Error(Code code) : code_{code} {}
+
     Error(Code code, const char* file, int line)
         : code_{code}, line_{line}, file_{file} {}
 

@@ -11,6 +11,7 @@
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
 #include "paging.hpp"
+#include "pci.hpp"
 #include "segment.hpp"
 
 // void *operator new(size_t size, void *buf) noexcept { return buf; }
@@ -137,6 +138,21 @@ extern "C" void KernelMainNewStack(
                 screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
             }
         }
+    }
+
+    auto err = pci::ScanAllDevice();
+    printk("ScanAllBus: %s\n", err.Name());
+
+    for (int i = 0; i < pci::num_device; ++i) {
+        const auto &device = pci::devices[i];
+        auto vender_id =
+            pci::ReadVendorId(device.bus, device.device, device.function);
+        auto class_code =
+            pci::ReadClassCode(device.bus, device.device, device.function);
+
+        printk("%d.%d.%d: vend %04x, class %08x, head %02x\n", device.bus,
+               device.device, device.function, vender_id, class_code,
+               device.header_type);
     }
 
     while (1) __asm__("hlt");
