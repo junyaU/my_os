@@ -2,6 +2,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <numeric>
+#include <vector>
 
 #include "asmfunc.h"
 #include "console.hpp"
@@ -10,27 +12,19 @@
 #include "frame_buffer_config.hpp"
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
+#include "mouse.hpp"
 #include "paging.hpp"
 #include "pci.hpp"
 #include "segment.hpp"
-
-// void *operator new(size_t size, void *buf) noexcept { return buf; }
+#include "usb/classdriver/mouse.hpp"
+#include "usb/device.hpp"
+#include "usb/memory.hpp"
+#include "usb/xhci/trb.hpp"
+#include "usb/xhci/xhci.hpp"
 
 void operator delete(void *obj) noexcept {}
 
 const PixelColor desktop_bg_color{45, 118, 237};
-
-const int kMouseCursorWidth = 15;
-const int kMouseCursorHeight = 24;
-
-const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
-    "@              ", "@@             ", "@.@            ", "@..@           ",
-    "@...@          ", "@....@         ", "@.....@        ", "@......@       ",
-    "@.......@      ", "@........@     ", "@.........@    ", "@..........@   ",
-    "@...........@  ", "@............@ ", "@......@@@@@@@@", "@......@       ",
-    "@....@@.@      ", "@...@ @.@      ", "@..@   @.@     ", "@.@    @.@     ",
-    "@@      @.@    ", "@       @.@    ", "         @.@   ", "         @@@   ",
-};
 
 char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
 ScreenDrawer *screen_drawer;
@@ -38,8 +32,15 @@ ScreenDrawer *screen_drawer;
 char console_buf[sizeof(Console)];
 Console *console;
 
+char mouse_cursor_buf[sizeof(MouseCursor)];
+MouseCursor *mouse_cursor;
+
 char memory_manager_buffer[sizeof(BitmapMemoryManager)];
 BitmapMemoryManager *memory_manager;
+
+void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
+    mouse_cursor->MoveRelative({displacement_x, displacement_y});
+}
 
 extern "C" void __cxa_pure_virtual() {
     while (1) __asm__("hlt");
@@ -89,6 +90,9 @@ extern "C" void KernelMainNewStack(
     console = new (console_buf)
         Console{*screen_drawer, {255, 255, 255}, {255, 255, 255}};
 
+    mouse_cursor = new (mouse_cursor_buf)
+        MouseCursor{screen_drawer, desktop_bg_color, {300, 200}};
+
     SetupSegments();
 
     const uint16_t kernel_cs = 1 << 3;
@@ -130,16 +134,6 @@ extern "C" void KernelMainNewStack(
     memory_manager->SetMemoryRange(FrameID{1},
                                    FrameID{available_end / kBytesPerFrame});
 
-    for (int dy = 0; dy < kMouseCursorHeight; ++dy) {
-        for (int dx = 0; dx < kMouseCursorWidth; ++dx) {
-            if (mouse_cursor_shape[dy][dx] == '@') {
-                screen_drawer->Draw(200 + dx, 100 + dy, {0, 0, 0});
-            } else if (mouse_cursor_shape[dy][dx] == '.') {
-                screen_drawer->Draw(200 + dx, 100 + dy, {255, 255, 255});
-            }
-        }
-    }
-
     auto err = pci::ScanAllDevice();
     printk("ScanAllBus: %s\n", err.Name());
 
@@ -153,6 +147,60 @@ extern "C" void KernelMainNewStack(
         printk("%d.%d.%d: vend %04x, class %08x, head %02x\n", device.bus,
                device.device, device.function, vender_id, class_code,
                device.header_type);
+    }
+
+    pci::Device *xhc_device = nullptr;
+    for (int i = 0; i < pci::num_device; ++i) {
+        if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u)) {
+            xhc_device = &pci::devices[i];
+
+            if (0x8086 == pci::ReadVendorId(*xhc_device)) {
+                break;
+            }
+        }
+    }
+
+    if (xhc_device) {
+        printk("xHC has been found: %d.%d.%d\n", xhc_device->bus,
+               xhc_device->device, xhc_device->function);
+    }
+
+    const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_device, 0);
+    printk("ReadBar: %s\n", xhc_bar.error.Name());
+    const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
+    printk("xHC mmio_base = %08lx\n", xhc_mmio_base);
+
+    usb::xhci::Controller xhc{xhc_mmio_base};
+
+    {
+        auto err = xhc.Initialize();
+
+        printk("xhc.Initialize: %s\n", err.Name());
+    }
+
+    printk("xHC starting\n");
+    xhc.Run();
+
+    usb::HIDMouseDriver::default_observer = MouseObserver;
+
+    for (int i = 1; i <= xhc.MaxPorts(); ++i) {
+        auto port = xhc.PortAt(i);
+
+        if (!port.IsConnected()) {
+            continue;
+        }
+
+        if (auto err = usb::xhci::ConfigurePort(xhc, port)) {
+            printk("failed to configure port: %s at %s:%d\n", err.Name(),
+                   err.File(), err.Line());
+        }
+    }
+
+    while (1) {
+        if (auto err = usb::xhci::ProcessEvent(xhc)) {
+            printk("Error while ProcessEvent: %s at %s:%d\n", err.Name(),
+                   err.File(), err.Line());
+        }
     }
 
     while (1) __asm__("hlt");

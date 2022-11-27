@@ -13,13 +13,12 @@ uint32_t MakeAddress(uint8_t bus, uint8_t device, uint8_t function,
            (reg_addr & 0xfcu);
 }
 
-Error AddDevice(uint8_t bus, uint8_t device, uint8_t function,
-                uint8_t header_type) {
+Error AddDevice(const Device &device) {
     if (num_device == devices.size()) {
         return Error::kFull;
     }
 
-    devices[num_device] = Device{bus, device, function, header_type};
+    devices[num_device] = device;
     num_device++;
 
     return Error::kSuccess;
@@ -29,15 +28,14 @@ Error ScanBus(uint8_t bus);
 
 Error ScanFunction(uint8_t bus, uint8_t device, uint8_t function) {
     auto header_type = ReadHeaderType(bus, device, function);
-    if (Error err = AddDevice(bus, device, function, header_type)) {
+    auto class_code = ReadClassCode(bus, device, function);
+    Device dev{bus, device, function, header_type, class_code};
+
+    if (Error err = AddDevice(dev)) {
         return err;
     }
 
-    auto class_code = ReadClassCode(bus, device, function);
-    uint8_t base_class = (class_code >> 24) & 0xffu;
-    uint8_t sub_class = (class_code >> 16) & 0xffu;
-
-    if (base_class == 0x06u && sub_class == 0x04u) {
+    if (class_code.Match(0x06u, 0x04u)) {
         auto bus_num = ReadBusNumbers(bus, device, function);
         uint8_t secondary_bus = (bus_num >> 8) & 0xffu;
         return ScanBus(secondary_bus);
@@ -98,14 +96,21 @@ uint16_t ReadDeviceId(uint8_t bus, uint8_t device, uint8_t function) {
     return ReadData() >> 16;
 }
 
-uint16_t ReadHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
+uint8_t ReadHeaderType(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x0c));
     return (ReadData() >> 16) & 0xffu;
 }
 
-uint32_t ReadClassCode(uint8_t bus, uint8_t device, uint8_t function) {
+ClassCode ReadClassCode(uint8_t bus, uint8_t device, uint8_t function) {
     WriteAddress(MakeAddress(bus, device, function, 0x08));
-    return ReadData();
+    auto reg = ReadData();
+
+    ClassCode class_code;
+    class_code.base = (reg >> 24) & 0xffu;
+    class_code.sub = (reg >> 16) & 0xffu;
+    class_code.interface = (reg >> 8) & 0xffu;
+
+    return class_code;
 }
 
 uint32_t ReadBusNumbers(uint8_t bus, uint8_t device, uint8_t function) {
@@ -137,4 +142,38 @@ Error ScanAllDevice() {
     return Error::kSuccess;
 }
 
+uint32_t ReadConfReg(const Device &device, uint8_t reg_addr) {
+    WriteAddress(
+        MakeAddress(device.bus, device.device, device.function, reg_addr));
+    return ReadData();
+}
+
+void WriteConfReg(const Device &device, uint8_t reg_addr, uint32_t value) {
+    WriteAddress(
+        MakeAddress(device.bus, device.device, device.function, reg_addr));
+    WriteData(value);
+}
+
+WithError<uint64_t> ReadBar(Device &device, unsigned int bar_index) {
+    if (bar_index >= 6) {
+        return {0, MAKE_ERROR(Error::kIndexOutOfRange)};
+    }
+
+    const auto addr = CalcBarAddress(bar_index);
+    const auto bar = ReadConfReg(device, addr);
+
+    // 32
+    if ((bar & 4u) == 0) {
+        return {bar, MAKE_ERROR(Error::kSuccess)};
+    }
+
+    // 64
+    if (bar_index >= 5) {
+        return {0, MAKE_ERROR(Error::kIndexOutOfRange)};
+    }
+
+    const auto bar_upper = ReadConfReg(device, addr + 4);
+    return {bar | (static_cast<uint64_t>(bar_upper) << 32),
+            MAKE_ERROR(Error::kSuccess)};
+}
 }  // namespace pci
