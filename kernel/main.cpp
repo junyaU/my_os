@@ -10,6 +10,7 @@
 #include "drawing.hpp"
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
+#include "interrupt.hpp"
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
 #include "mouse.hpp"
@@ -42,10 +43,6 @@ void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
     mouse_cursor->MoveRelative({displacement_x, displacement_y});
 }
 
-extern "C" void __cxa_pure_virtual() {
-    while (1) __asm__("hlt");
-}
-
 int printk(const char format[], ...) {
     va_list ap;
     int result;
@@ -57,6 +54,19 @@ int printk(const char format[], ...) {
 
     console->PutString(s);
     return result;
+}
+
+usb::xhci::Controller *xhc;
+
+__attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame) {
+    while (xhc->PrimaryEventRing()->HasFront()) {
+        if (auto err = usb::xhci::ProcessEvent(*xhc)) {
+            printk("Error while ProcessEvent: %s at %s:%d\n", err.Name(),
+                   err.File(), err.Line());
+        }
+    }
+
+    NotifyEndOfInterrupt();
 }
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -165,6 +175,20 @@ extern "C" void KernelMainNewStack(
                xhc_device->device, xhc_device->function);
     }
 
+    const uint16_t cs = GetCS();
+    SetIDTEntry(idt[InterruptVector::kXHCI],
+                MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+                reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
+
+    LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+
+    const uint8_t bsp_local_apic_id =
+        *reinterpret_cast<const uint32_t *>(0xfee00020);
+
+    pci::ConfigureMSIFixedDestination(
+        *xhc_device, bsp_local_apic_id, pci::MSITriggerMode::kLevel,
+        pci::MSIDeliveryMode::kFixed, InterruptVector::kXHCI, 0);
+
     const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_device, 0);
     printk("ReadBar: %s\n", xhc_bar.error.Name());
     const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
@@ -181,6 +205,9 @@ extern "C" void KernelMainNewStack(
     printk("xHC starting\n");
     xhc.Run();
 
+    ::xhc = &xhc;
+    __asm__("sti");
+
     usb::HIDMouseDriver::default_observer = MouseObserver;
 
     for (int i = 1; i <= xhc.MaxPorts(); ++i) {
@@ -196,12 +223,9 @@ extern "C" void KernelMainNewStack(
         }
     }
 
-    while (1) {
-        if (auto err = usb::xhci::ProcessEvent(xhc)) {
-            printk("Error while ProcessEvent: %s at %s:%d\n", err.Name(),
-                   err.File(), err.Line());
-        }
-    }
+    while (1) __asm__("hlt");
+}
 
+extern "C" void __cxa_pure_virtual() {
     while (1) __asm__("hlt");
 }
