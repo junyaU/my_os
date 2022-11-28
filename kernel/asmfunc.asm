@@ -67,6 +67,7 @@ IoIn32:
     ret
 
 global GetCS ; uint16_t GetCS(void);
+GetCS:
     xor eax, eax
     mov ax, cs
     ret

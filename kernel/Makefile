@@ -1,5 +1,5 @@
 TARGET = kernel.elf
-OBJS = main.o drawing.o font.o hankaku.o newlib_support.o console.o asmfunc.o segment.o paging.o memory_manager.o pci.o libcxx_support.o logger.o mouse.o interrput.o usb/memory.o usb/device.o usb/xhci/ring.o usb/xhci/trb.o usb/xhci/xhci.o \
+OBJS = main.o drawing.o font.o hankaku.o newlib_support.o console.o asmfunc.o segment.o paging.o memory_manager.o pci.o libcxx_support.o logger.o mouse.o interrupt.o usb/memory.o usb/device.o usb/xhci/ring.o usb/xhci/trb.o usb/xhci/xhci.o \
        usb/xhci/port.o usb/xhci/device.o usb/xhci/devmgr.o usb/xhci/registers.o \
        usb/classdriver/base.o usb/classdriver/hid.o usb/classdriver/keyboard.o \
        usb/classdriver/mouse.o

@@ -16,12 +16,14 @@
 #include "mouse.hpp"
 #include "paging.hpp"
 #include "pci.hpp"
+#include "queue.hpp"
 #include "segment.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
 #include "usb/xhci/trb.hpp"
 #include "usb/xhci/xhci.hpp"
+#include "x86_descriptor.hpp"
 
 void operator delete(void *obj) noexcept {}
 
@@ -58,14 +60,16 @@ int printk(const char format[], ...) {
 
 usb::xhci::Controller *xhc;
 
-__attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame) {
-    while (xhc->PrimaryEventRing()->HasFront()) {
-        if (auto err = usb::xhci::ProcessEvent(*xhc)) {
-            printk("Error while ProcessEvent: %s at %s:%d\n", err.Name(),
-                   err.File(), err.Line());
-        }
-    }
+struct Message {
+    enum Type {
+        kInterruptXHCI,
+    } type;
+};
 
+ArrayQueue<Message> *main_queue;
+
+__attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame) {
+    main_queue->ENQ(Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
 }
 
@@ -144,6 +148,10 @@ extern "C" void KernelMainNewStack(
     memory_manager->SetMemoryRange(FrameID{1},
                                    FrameID{available_end / kBytesPerFrame});
 
+    std::array<Message, 32> main_queue_data;
+    ArrayQueue<Message> main_queue{main_queue_data};
+    ::main_queue = &main_queue;
+
     auto err = pci::ScanAllDevice();
     printk("ScanAllBus: %s\n", err.Name());
 
@@ -220,6 +228,31 @@ extern "C" void KernelMainNewStack(
         if (auto err = usb::xhci::ConfigurePort(xhc, port)) {
             printk("failed to configure port: %s at %s:%d\n", err.Name(),
                    err.File(), err.Line());
+        }
+    }
+
+    while (true) {
+        __asm__("cli");
+        if (main_queue.Count() == 0) {
+            __asm__("sti\n\thlt");
+            continue;
+        }
+
+        Message msg = main_queue.Front();
+        main_queue.DEQ();
+        __asm__("sti");
+
+        switch (msg.type) {
+            case Message::kInterruptXHCI:
+                while (xhc.PrimaryEventRing()->HasFront()) {
+                    if (auto err = usb::xhci::ProcessEvent(xhc)) {
+                        printk("Error while ProcessEvent: %s at %s:%d\n",
+                               err.Name(), err.File(), err.Line());
+                    }
+                }
+                break;
+            default:
+                printk("Unknown message type: %d\n", msg.type);
         }
     }
 
