@@ -10,6 +10,8 @@ class ScreenDrawer {
     ScreenDrawer(const FrameBufferConfig &config) : config_{config} {}
     virtual ~ScreenDrawer() = default;
     virtual void Draw(int x, int y, const PixelColor &c) = 0;
+    virtual int Width() const = 0;
+    virtual int Height() const = 0;
 
     //　該当ピクセルのアドレス
    protected:
