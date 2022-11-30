@@ -1,43 +1,33 @@
-#pragma once
+#include "window.hpp"
 
-#include <optional>
-#include <vector>
+Window::Window(int width, int height) : width_{width}, height_{height} {
+    data_.resize(height);
+    for (int y = 0; y < height; ++y) {
+        data_[y].resize(width);
+    }
+}
 
-#include "drawing.hpp"
-
-class Window {
-   public:
-    class WindowDrawer : public ScreenDrawer {
-       public:
-        WindowDrawer(Window &window) : window_{window} {}
-        virtual void Draw(int x, int y, const PixelColor &c) override {
-            window_.At(x, y);
+void Window::DrawTo(ScreenDrawer &drawer, Vector2D<int> position) {
+    if (!transparent_color_) {
+        for (int y = 0; y < Height(); ++y) {
+            for (int x = 0; x < Width(); ++x) {
+                drawer.Draw(x + position.x, y + position.y, At(x, y));
+            }
         }
-        virtual int Width() const override { return window_.Width(); }
-        virtual int Height() const override { return window_.Height(); }
+        return;
+    }
 
-       private:
-        Window &window_;
-    };
+    const auto tc = transparent_color_.value();
+    for (int y = 0; y < Height(); ++y) {
+        for (int x = 0; x < Width(); ++x) {
+            const auto color = At(x, y);
+            if (color != tc) {
+                drawer.Draw(position.x + x, position.y + y, c);
+            }
+        }
+    }
+}
 
-    Window(int width, int height);
-    ~Window() = default;
-    Window(const Window &rhs) = delete;
-    Window &operator=(const Window &rhs) = delete;
-
-    void DrawTo(ScreenDrawer &drawer, Vector2D<int> position);
-    void SetTransparentColor(std::optional<PixelColor> c);
-    WindowDrawer *Drawer();
-
-    PixelColor &At(int x, int y);
-    const PixelColor &At(int x, int y) const;
-
-    int Width() const;
-    int Height() const;
-
-   private:
-    int width_, height_;
-    std::vector<std::vector<PixelColor>> data_{};
-    WindowDrawer drawer_{*this};
-    std::optional<PixelColor> transparent_color_{std::nullopt};
-};
+void Window::SetTransparentColor(std::optional<PixelColor> c) {
+    transparent_color_ = c;
+}
