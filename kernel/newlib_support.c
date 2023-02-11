@@ -15,7 +15,6 @@ caddr_t sbrk(int incr) {
 
     caddr_t prev_break = program_break;
     program_break += incr;
-
     return prev_break;
 }
 

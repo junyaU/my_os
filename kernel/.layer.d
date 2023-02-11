@@ -1,12 +1,6 @@
-console.o: console.cpp console.hpp drawing.hpp frame_buffer_config.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
-  font.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
-  layer.hpp \
+layer.o: layer.cpp layer.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/map \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tree \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/iterator \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/iosfwd \
@@ -19,10 +13,14 @@ console.o: console.cpp console.hpp drawing.hpp frame_buffer_config.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/exception \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdlib \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdlib.h \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdint \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdint.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/new \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/utility \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/initializer_list \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstring \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/string.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__debug \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/memory \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/limits \
@@ -41,4 +39,4 @@ console.o: console.cpp console.hpp drawing.hpp frame_buffer_config.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
-  window.hpp
+  drawing.hpp frame_buffer_config.hpp window.hpp

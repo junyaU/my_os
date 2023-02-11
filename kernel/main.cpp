@@ -11,6 +11,7 @@
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
 #include "interrupt.hpp"
+#include "layer.hpp"
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
 #include "mouse.hpp"
@@ -23,11 +24,10 @@
 #include "usb/memory.hpp"
 #include "usb/xhci/trb.hpp"
 #include "usb/xhci/xhci.hpp"
+#include "window.hpp"
 #include "x86_descriptor.hpp"
 
 void operator delete(void *obj) noexcept {}
-
-const PixelColor desktop_bg_color{45, 118, 237};
 
 char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
 ScreenDrawer *screen_drawer;
@@ -35,14 +35,15 @@ ScreenDrawer *screen_drawer;
 char console_buf[sizeof(Console)];
 Console *console;
 
-char mouse_cursor_buf[sizeof(MouseCursor)];
-MouseCursor *mouse_cursor;
-
 char memory_manager_buffer[sizeof(BitmapMemoryManager)];
 BitmapMemoryManager *memory_manager;
 
+unsigned int mouse_layer_id;
+
 void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
-    mouse_cursor->MoveRelative({displacement_x, displacement_y});
+    layer_manager->MoveRelative(mouse_layer_id,
+                                {displacement_x, displacement_y});
+    layer_manager->Draw();
 }
 
 int printk(const char format[], ...) {
@@ -92,20 +93,12 @@ extern "C" void KernelMainNewStack(
             break;
     }
 
-    const int frame_width = frame_buffer_config.horizontal_resolution;
-    const int frame_height = frame_buffer_config.vertical_resolution;
+    DrawDesktop(*screen_drawer);
 
-    FillRectangle(*screen_drawer, {0, 0}, {frame_width, frame_height - 50},
-                  desktop_bg_color);
+    console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
+    console->SetDrawer(screen_drawer);
 
-    FillRectangle(*screen_drawer, {0, frame_height - 50}, {frame_width, 50},
-                  {80, 80, 80});
-
-    console = new (console_buf)
-        Console{*screen_drawer, {255, 255, 255}, {255, 255, 255}};
-
-    mouse_cursor = new (mouse_cursor_buf)
-        MouseCursor{screen_drawer, desktop_bg_color, {300, 200}};
+    printk("okokko\n");
 
     SetupSegments();
 
@@ -197,7 +190,7 @@ extern "C" void KernelMainNewStack(
     LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
     const uint8_t bsp_local_apic_id =
-        *reinterpret_cast<const uint32_t *>(0xfee00020);
+        *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
 
     pci::ConfigureMSIFixedDestination(
         *xhc_device, bsp_local_apic_id, pci::MSITriggerMode::kLevel,
@@ -220,7 +213,6 @@ extern "C" void KernelMainNewStack(
     xhc.Run();
 
     ::xhc = &xhc;
-    __asm__("sti");
 
     usb::HIDMouseDriver::default_observer = MouseObserver;
 
@@ -236,6 +228,35 @@ extern "C" void KernelMainNewStack(
                    err.File(), err.Line());
         }
     }
+
+    const int kFrameWidth = frame_buffer_config.horizontal_resolution;
+    const int kFrameHeight = frame_buffer_config.vertical_resolution;
+
+    auto bgWindow = std::make_shared<Window>(kFrameWidth, kFrameHeight);
+    auto bgDrawer = bgWindow->Drawer();
+
+    DrawDesktop(*bgDrawer);
+    console->SetDrawer(bgDrawer);
+    printk("nienieeiein");
+
+    bgWindow->DrawTo(*screen_drawer, {0, 0});
+
+    auto mouse_window =
+        std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight);
+    mouse_window->SetTransparentColor(kMouseTransparentColor);
+    DrawMouseCursor(mouse_window->Drawer(), {0, 0});
+
+    layer_manager = new LayerManager;
+    layer_manager->SetDrawer(screen_drawer);
+
+    auto bglayer_id =
+        layer_manager->NewLayer().SetWindow(bgWindow).Move({0, 0}).ID();
+    mouse_layer_id =
+        layer_manager->NewLayer().SetWindow(mouse_window).Move({200, 200}).ID();
+
+    layer_manager->UpDown(bglayer_id, 0);
+    layer_manager->UpDown(mouse_layer_id, 1);
+    layer_manager->Draw();
 
     while (true) {
         __asm__("cli");

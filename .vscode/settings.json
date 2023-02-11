@@ -61,7 +61,9 @@
     "variant": "cpp",
     "vector": "cpp",
     "__verbose_abort": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "__tree": "cpp",
+    "map": "cpp"
   },
   "C_Cpp.errorSquiggles": "Enabled"
 }

@@ -33,9 +33,11 @@ void SetDataSegment(SegmentDescriptor& descriptor, DescriptorType type,
     descriptor.bits.default_operation_size = 1;
 }
 
+// GDT再構築
 void SetupSegments() {
     gdt[0].data = 0;
     SetCodeSegment(gdt[1], DescriptorType::kExecuteRead, 0, 0, 0xfffff);
     SetDataSegment(gdt[2], DescriptorType::kReadWrite, 0, 0, 0xfffff);
+    // CPUにgdtを新しいGDTとして登録する
     LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uintptr_t>(&gdt[0]));
 }

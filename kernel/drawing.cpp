@@ -35,3 +35,12 @@ void DrawRectangle(ScreenDrawer& drawer, const Vector2D<int>& position,
         drawer.Draw(position.x + area.x - 1, position.y + dy, c);
     }
 }
+
+void DrawDesktop(ScreenDrawer& drawer) {
+    const auto width = drawer.Width();
+    const auto height = drawer.Height();
+    FillRectangle(drawer, {0, 0}, {width, height - 50}, kDesktopBGColor);
+    FillRectangle(drawer, {0, height - 50}, {width, 50}, {1, 8, 17});
+    FillRectangle(drawer, {0, height - 50}, {width / 5, 50}, {80, 80, 80});
+    DrawRectangle(drawer, {10, height - 40}, {30, 30}, {160, 160, 160});
+}
