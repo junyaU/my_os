@@ -22,8 +22,10 @@ void Console::PutString(const char* s) {
         }
 
         if (cursor_column_ < columuns - 1) {
-            WriteAscii(*drawer_, FONT_HORIZONTAL_PIXELS * cursor_column_,
-                       FONT_VERTICAL_PIXELS * cursor_row_, *s, fg_color_);
+            WriteAscii(*drawer_,
+                       Vector2D<int>{FONT_HORIZONTAL_PIXELS * cursor_column_,
+                                     FONT_VERTICAL_PIXELS * cursor_row_},
+                       *s, fg_color_);
 
             buffer_[cursor_row_][cursor_column_] = *s;
             ++cursor_column_;
@@ -55,15 +57,15 @@ void Console::NewLine() {
     // refresh
     for (int y = 0; y < FONT_VERTICAL_PIXELS * rows; ++y) {
         for (int x = 0; x < FONT_HORIZONTAL_PIXELS * columuns; ++x) {
-            drawer_->Draw(x, y, bg_color_);
+            drawer_->Draw(Vector2D<int>{x, y}, bg_color_);
         }
     }
 
     for (int row = 0; row < rows - 1; ++row) {
         // 1行下の列を現在の行にコピーする コピーした文字を出力
         memcpy(buffer_[row], buffer_[row + 1], columuns + 1);
-        WriteString(*drawer_, 0, FONT_VERTICAL_PIXELS * row, buffer_[row],
-                    fg_color_);
+        WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+                    buffer_[row], fg_color_);
     }
 
     memset(buffer_[rows - 1], 0, columuns + 1);
@@ -71,7 +73,7 @@ void Console::NewLine() {
 
 void Console::Refresh() {
     for (int row = 0; row < rows; ++row) {
-        WriteString(*drawer_, 0, FONT_VERTICAL_PIXELS * row, buffer_[row],
-                    fg_color_);
+        WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+                    buffer_[row], fg_color_);
     }
 }

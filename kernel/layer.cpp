@@ -23,13 +23,13 @@ Layer& Layer::MoveRelative(Vector2D<int> pos_diff) {
     return *this;
 }
 
-void Layer::DrawTo(ScreenDrawer& drawer) const {
+void Layer::DrawTo(FrameBuffer& screen) const {
     if (window_) {
-        window_->DrawTo(drawer, pos_);
+        window_->DrawTo(screen, pos_);
     }
 }
 
-void LayerManager::SetDrawer(ScreenDrawer* drawer) { drawer_ = drawer; }
+void LayerManager::SetDrawer(FrameBuffer* screen) { screen_ = screen; }
 
 Layer& LayerManager::NewLayer() {
     ++latest_id_;
@@ -38,7 +38,7 @@ Layer& LayerManager::NewLayer() {
 
 void LayerManager::Draw() const {
     for (auto layer : layer_stack_) {
-        layer->DrawTo(*drawer_);
+        layer->DrawTo(*screen_);
     }
 }
 

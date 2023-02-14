@@ -19,6 +19,7 @@
 #include "pci.hpp"
 #include "queue.hpp"
 #include "segment.hpp"
+#include "timer.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -38,14 +39,6 @@ Console *console;
 char memory_manager_buffer[sizeof(BitmapMemoryManager)];
 BitmapMemoryManager *memory_manager;
 
-unsigned int mouse_layer_id;
-
-void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
-    layer_manager->MoveRelative(mouse_layer_id,
-                                {displacement_x, displacement_y});
-    layer_manager->Draw();
-}
-
 int printk(const char format[], ...) {
     va_list ap;
     int result;
@@ -57,6 +50,18 @@ int printk(const char format[], ...) {
 
     console->PutString(s);
     return result;
+}
+
+unsigned int mouse_layer_id;
+
+void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
+    layer_manager->MoveRelative(mouse_layer_id,
+                                {displacement_x, displacement_y});
+    StartLAPICTimer();
+    layer_manager->Draw();
+    auto elapsed = LAPICTimerElapsed();
+    StopLAPICTimer();
+    printk("MouseObserver: elapsed = %u\n", elapsed);
 }
 
 usb::xhci::Controller *xhc;
@@ -98,7 +103,7 @@ extern "C" void KernelMainNewStack(
     console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
     console->SetDrawer(screen_drawer);
 
-    printk("okokko\n");
+    InitializeLAPICTimer();
 
     SetupSegments();
 
@@ -178,8 +183,8 @@ extern "C" void KernelMainNewStack(
     }
 
     if (xhc_device) {
-        printk("xHC has been found: %d.%d.%d\n", xhc_device->bus,
-               xhc_device->device, xhc_device->function);
+        // printk("xHC has been found: %d.%d.%d\n", xhc_device->bus,
+        //        xhc_device->device, xhc_device->function);
     }
 
     const uint16_t cs = GetCS();
@@ -232,22 +237,27 @@ extern "C" void KernelMainNewStack(
     const int kFrameWidth = frame_buffer_config.horizontal_resolution;
     const int kFrameHeight = frame_buffer_config.vertical_resolution;
 
-    auto bgWindow = std::make_shared<Window>(kFrameWidth, kFrameHeight);
+    auto bgWindow = std::make_shared<Window>(kFrameWidth, kFrameHeight,
+                                             frame_buffer_config.pixel_format);
     auto bgDrawer = bgWindow->Drawer();
 
     DrawDesktop(*bgDrawer);
     console->SetDrawer(bgDrawer);
-    printk("nienieeiein");
-
-    bgWindow->DrawTo(*screen_drawer, {0, 0});
 
     auto mouse_window =
-        std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight);
+        std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight,
+                                 frame_buffer_config.pixel_format);
     mouse_window->SetTransparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Drawer(), {0, 0});
 
+    FrameBuffer screen;
+    if (auto err = screen.Initialize(frame_buffer_config)) {
+        printk("failed to initialize frame buffer: %s at %s:%d\n", err.Name(),
+               err.File(), err.Line());
+    }
+
     layer_manager = new LayerManager;
-    layer_manager->SetDrawer(screen_drawer);
+    layer_manager->SetDrawer(&screen);
 
     auto bglayer_id =
         layer_manager->NewLayer().SetWindow(bgWindow).Move({0, 0}).ID();

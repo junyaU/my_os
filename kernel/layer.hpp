@@ -17,7 +17,7 @@ class Layer {
 
     Layer& Move(Vector2D<int> pos);
     Layer& MoveRelative(Vector2D<int> pos_diff);
-    void DrawTo(ScreenDrawer& drawer) const;
+    void DrawTo(FrameBuffer& screen) const;
 
    private:
     unsigned int id_;
@@ -27,7 +27,7 @@ class Layer {
 
 class LayerManager {
    public:
-    void SetDrawer(ScreenDrawer* drawer);
+    void SetDrawer(FrameBuffer* screen);
     Layer& NewLayer();
 
     void Draw() const;
@@ -38,7 +38,7 @@ class LayerManager {
     void Hide(unsigned int id);
 
    private:
-    ScreenDrawer* drawer_{nullptr};
+    FrameBuffer* screen_{nullptr};
     // 全てのレイヤを格納する動的配列
     std::vector<std::unique_ptr<Layer>> layers_{};
     // レイヤの重なりを表す配列 先頭が最背面となり、末尾が最前面となる
