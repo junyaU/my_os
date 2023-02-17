@@ -9,12 +9,14 @@ class Console {
     Console(const PixelColor& fg_color, const PixelColor& bg_color);
     void PutString(const char* s);
     void SetDrawer(ScreenDrawer* drawer);
+    void SetWindow(const std::shared_ptr<Window>& window);
 
    private:
     void NewLine();
     void Refresh();
 
     ScreenDrawer* drawer_;
+    std::shared_ptr<Window> window_;
     const PixelColor fg_color_, bg_color_;
     char buffer_[rows][columuns + 1];
     int cursor_row_, cursor_column_;

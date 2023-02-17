@@ -43,7 +43,18 @@ void Console::SetDrawer(ScreenDrawer* drawer) {
     if (drawer == drawer_) {
         return;
     }
+
     drawer_ = drawer;
+    Refresh();
+}
+
+void Console::SetWindow(const std::shared_ptr<Window>& window) {
+    if (window_ == window) {
+        return;
+    }
+
+    window_ = window;
+    drawer_ = window->Drawer();
     Refresh();
 }
 
@@ -54,21 +65,25 @@ void Console::NewLine() {
         return;
     }
 
-    // refresh
-    for (int y = 0; y < FONT_VERTICAL_PIXELS * rows; ++y) {
-        for (int x = 0; x < FONT_HORIZONTAL_PIXELS * columuns; ++x) {
-            drawer_->Draw(Vector2D<int>{x, y}, bg_color_);
-        }
+    if (window_) {
+    } else {
     }
 
-    for (int row = 0; row < rows - 1; ++row) {
-        // 1行下の列を現在の行にコピーする コピーした文字を出力
-        memcpy(buffer_[row], buffer_[row + 1], columuns + 1);
-        WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
-                    buffer_[row], fg_color_);
-    }
+    // // refresh
+    // for (int y = 0; y < FONT_VERTICAL_PIXELS * rows; ++y) {
+    //     for (int x = 0; x < FONT_HORIZONTAL_PIXELS * columuns; ++x) {
+    //         drawer_->Draw(Vector2D<int>{x, y}, bg_color_);
+    //     }
+    // }
 
-    memset(buffer_[rows - 1], 0, columuns + 1);
+    // for (int row = 0; row < rows - 1; ++row) {
+    //     // 1行下の列を現在の行にコピーする コピーした文字を出力
+    //     memcpy(buffer_[row], buffer_[row + 1], columuns + 1);
+    //     WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+    //                 buffer_[row], fg_color_);
+    // }
+
+    // memset(buffer_[rows - 1], 0, columuns + 1);
 }
 
 void Console::Refresh() {
