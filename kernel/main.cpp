@@ -249,7 +249,7 @@ extern "C" void KernelMainNewStack(
     auto bgDrawer = bgWindow->Drawer();
 
     DrawDesktop(*bgDrawer);
-    console->SetDrawer(bgDrawer);
+    console->SetWindow(bgWindow);
 
     auto mouse_window =
         std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight,

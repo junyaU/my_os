@@ -21,7 +21,7 @@ void Console::PutString(const char* s) {
             continue;
         }
 
-        if (cursor_column_ < columuns - 1) {
+        if (cursor_column_ < kColumns - 1) {
             WriteAscii(*drawer_,
                        Vector2D<int>{FONT_HORIZONTAL_PIXELS * cursor_column_,
                                      FONT_VERTICAL_PIXELS * cursor_row_},
@@ -60,34 +60,35 @@ void Console::SetWindow(const std::shared_ptr<Window>& window) {
 
 void Console::NewLine() {
     cursor_column_ = 0;
-    if (cursor_row_ < rows - 1) {
+    if (cursor_row_ < kRows - 1) {
         ++cursor_row_;
         return;
     }
 
     if (window_) {
+        Rectangle<int> move_src{{0, FONT_VERTICAL_PIXELS},
+                                {FONT_HORIZONTAL_PIXELS * kColumns,
+                                 FONT_VERTICAL_PIXELS * (kRows - 1)}};
+        window_->Move({0, 0}, move_src);
+        FillRectangle(*drawer_, {0, FONT_VERTICAL_PIXELS * (kRows - 1)},
+                      {FONT_HORIZONTAL_PIXELS * kColumns, FONT_VERTICAL_PIXELS},
+                      bg_color_);
     } else {
+        FillRectangle(*drawer_, {0, 0},
+                      {FONT_HORIZONTAL_PIXELS * kColumns,
+                       FONT_VERTICAL_PIXELS * (kRows - 1)},
+                      bg_color_);
+        for (int row = 0; row < kRows; row++) {
+            memcpy(buffer_[row], buffer_[row + 1], kColumns + 1);
+            WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+                        buffer_[row], fg_color_);
+        }
+        memset(buffer_[kRows - 1], 0, kColumns + 1);
     }
-
-    // // refresh
-    // for (int y = 0; y < FONT_VERTICAL_PIXELS * rows; ++y) {
-    //     for (int x = 0; x < FONT_HORIZONTAL_PIXELS * columuns; ++x) {
-    //         drawer_->Draw(Vector2D<int>{x, y}, bg_color_);
-    //     }
-    // }
-
-    // for (int row = 0; row < rows - 1; ++row) {
-    //     // 1行下の列を現在の行にコピーする コピーした文字を出力
-    //     memcpy(buffer_[row], buffer_[row + 1], columuns + 1);
-    //     WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
-    //                 buffer_[row], fg_color_);
-    // }
-
-    // memset(buffer_[rows - 1], 0, columuns + 1);
 }
 
 void Console::Refresh() {
-    for (int row = 0; row < rows; ++row) {
+    for (int row = 0; row < kRows; ++row) {
         WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
                     buffer_[row], fg_color_);
     }
