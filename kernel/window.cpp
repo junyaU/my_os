@@ -29,8 +29,10 @@ void Window::DrawTo(FrameBuffer& dst, Vector2D<int> position) {
 
     const auto tc = transparent_color_.value();
     auto& drawer = dst.Drawer();
-    for (int y = 0; y < Height(); y++) {
-        for (int x = 0; x < Width(); x++) {
+
+    for (int y = 0; y < std::min(Height(), drawer.Height() - position.y); ++y) {
+        for (int x = std::max(0, 0 - position.x);
+             x < std::min(Width(), drawer.Width() - position.x); ++x) {
             const auto c = At(Vector2D<int>{x, y});
             if (c != tc) {
                 drawer.Draw(position + Vector2D<int>{x, y}, c);

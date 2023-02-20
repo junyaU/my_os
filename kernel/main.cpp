@@ -19,7 +19,6 @@
 #include "pci.hpp"
 #include "queue.hpp"
 #include "segment.hpp"
-#include "timer.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -48,27 +47,24 @@ int printk(const char format[], ...) {
     result = vsprintf(s, format, ap);
     va_end(ap);
 
-    StartLAPICTimer();
     console->PutString(s);
-    auto elapsed = LAPICTimerElapsed();
-    StopLAPICTimer();
-
-    sprintf(s, "[%9d]", elapsed);
-    console->PutString(s);
-
     return result;
 }
 
 unsigned int mouse_layer_id;
+Vector2D<int> screen_size;
+Vector2D<int> mouse_position;
 
 void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
-    layer_manager->MoveRelative(mouse_layer_id,
-                                {displacement_x, displacement_y});
-    StartLAPICTimer();
+    auto newpos =
+        mouse_position + Vector2D<int>{displacement_x, displacement_y};
+    newpos = ElementMin(
+        newpos,
+        screen_size + Vector2D<int>{-kMouseCursorWidth, -kMouseCursorHeight});
+    mouse_position = ElementMax(newpos, {0, 0});
+
+    layer_manager->Move(mouse_layer_id, mouse_position);
     layer_manager->Draw();
-    auto elapsed = LAPICTimerElapsed();
-    StopLAPICTimer();
-    printk("MouseObserver: elapsed = %u\n", elapsed);
 }
 
 usb::xhci::Controller *xhc;
@@ -241,10 +237,10 @@ extern "C" void KernelMainNewStack(
         }
     }
 
-    const int kFrameWidth = frame_buffer_config.horizontal_resolution;
-    const int kFrameHeight = frame_buffer_config.vertical_resolution;
+    screen_size.x = frame_buffer_config.horizontal_resolution;
+    screen_size.y = frame_buffer_config.vertical_resolution;
 
-    auto bgWindow = std::make_shared<Window>(kFrameWidth, kFrameHeight,
+    auto bgWindow = std::make_shared<Window>(screen_size.x, screen_size.y,
                                              frame_buffer_config.pixel_format);
     auto bgDrawer = bgWindow->Drawer();
 
@@ -256,6 +252,7 @@ extern "C" void KernelMainNewStack(
                                  frame_buffer_config.pixel_format);
     mouse_window->SetTransparentColor(kMouseTransparentColor);
     DrawMouseCursor(mouse_window->Drawer(), {0, 0});
+    mouse_position = {200, 200};
 
     FrameBuffer screen;
     if (auto err = screen.Initialize(frame_buffer_config)) {
@@ -268,8 +265,10 @@ extern "C" void KernelMainNewStack(
 
     auto bglayer_id =
         layer_manager->NewLayer().SetWindow(bgWindow).Move({0, 0}).ID();
-    mouse_layer_id =
-        layer_manager->NewLayer().SetWindow(mouse_window).Move({200, 200}).ID();
+    mouse_layer_id = layer_manager->NewLayer()
+                         .SetWindow(mouse_window)
+                         .Move(mouse_position)
+                         .ID();
 
     layer_manager->UpDown(bglayer_id, 0);
     layer_manager->UpDown(mouse_layer_id, 1);
