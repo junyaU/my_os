@@ -40,4 +40,4 @@ window.o: window.cpp window.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
-  logger.hpp
+  font.hpp logger.hpp

@@ -47,7 +47,7 @@ main.o: main.cpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tree \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__node_handle \
   memory_manager.hpp memory_map.hpp mouse.hpp paging.hpp pci.hpp \
-  queue.hpp segment.hpp timer.hpp usb/classdriver/mouse.hpp \
+  queue.hpp segment.hpp usb/classdriver/mouse.hpp \
   usb/classdriver/hid.hpp usb/classdriver/base.hpp usb/endpoint.hpp \
   usb/setupdata.hpp usb/device.hpp usb/arraymap.hpp usb/memory.hpp \
   usb/xhci/trb.hpp usb/xhci/context.hpp usb/xhci/xhci.hpp \

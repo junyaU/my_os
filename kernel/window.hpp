@@ -48,3 +48,5 @@ class Window {
 
     FrameBuffer shadow_buffer_{};
 };
+
+void DrawWindow(ScreenDrawer& drawer, const char* title);

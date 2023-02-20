@@ -106,8 +106,6 @@ extern "C" void KernelMainNewStack(
     console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
     console->SetDrawer(screen_drawer);
 
-    InitializeLAPICTimer();
-
     SetupSegments();
 
     const uint16_t kernel_cs = 1 << 3;
@@ -254,6 +252,12 @@ extern "C" void KernelMainNewStack(
     DrawMouseCursor(mouse_window->Drawer(), {0, 0});
     mouse_position = {200, 200};
 
+    auto main_window =
+        std::make_shared<Window>(160, 68, frame_buffer_config.pixel_format);
+    DrawWindow(*main_window->Drawer(), "Uchizono Window");
+    WriteString(*main_window->Drawer(), {24, 28}, "Welcome to", {0, 0, 0});
+    WriteString(*main_window->Drawer(), {24, 44}, " Hikakin TV", {0, 0, 0});
+
     FrameBuffer screen;
     if (auto err = screen.Initialize(frame_buffer_config)) {
         printk("failed to initialize frame buffer: %s at %s:%d\n", err.Name(),
@@ -269,9 +273,12 @@ extern "C" void KernelMainNewStack(
                          .SetWindow(mouse_window)
                          .Move(mouse_position)
                          .ID();
+    auto mian_window_layer_id =
+        layer_manager->NewLayer().SetWindow(main_window).Move({300, 100}).ID();
 
     layer_manager->UpDown(bglayer_id, 0);
     layer_manager->UpDown(mouse_layer_id, 1);
+    layer_manager->UpDown(mian_window_layer_id, 1);
     layer_manager->Draw();
 
     while (true) {
