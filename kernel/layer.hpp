@@ -17,7 +17,7 @@ class Layer {
 
     Layer& Move(Vector2D<int> pos);
     Layer& MoveRelative(Vector2D<int> pos_diff);
-    void DrawTo(FrameBuffer& screen) const;
+    void DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const;
 
    private:
     unsigned int id_;
@@ -30,7 +30,8 @@ class LayerManager {
     void SetDrawer(FrameBuffer* screen);
     Layer& NewLayer();
 
-    void Draw() const;
+    void Draw(const Rectangle<int>& area) const;
+    void Draw(unsigned int id, Vector2D<int> new_pos);
     void Move(unsigned int id, Vector2D<int> new_position);
     void MoveRelative(unsigned int id, Vector2D<int> pos_diff);
 

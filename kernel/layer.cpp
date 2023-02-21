@@ -23,9 +23,9 @@ Layer& Layer::MoveRelative(Vector2D<int> pos_diff) {
     return *this;
 }
 
-void Layer::DrawTo(FrameBuffer& screen) const {
+void Layer::DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const {
     if (window_) {
-        window_->DrawTo(screen, pos_);
+        window_->DrawTo(screen, pos_, area);
     }
 }
 
@@ -36,11 +36,13 @@ Layer& LayerManager::NewLayer() {
     return *layers_.emplace_back(new Layer{latest_id_});
 }
 
-void LayerManager::Draw() const {
+void LayerManager::Draw(const Rectangle<int>& area) const {
     for (auto layer : layer_stack_) {
-        layer->DrawTo(*screen_);
+        layer->DrawTo(*screen_, area);
     }
 }
+
+void LayerManager::Draw(unsigned int id, Vector2D<int> new_pos) const {}
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_position) {
     FindLayer(id)->Move(new_position);
