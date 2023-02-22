@@ -35,7 +35,7 @@ void Console::PutString(const char* s) {
     }
 
     if (layer_manager) {
-        layer_manager->Draw();
+        layer_manager->Draw(layer_id_);
     }
 }
 
@@ -57,6 +57,10 @@ void Console::SetWindow(const std::shared_ptr<Window>& window) {
     drawer_ = window->Drawer();
     Refresh();
 }
+
+void Console::SetLayerID(unsigned int layer_id) { layer_id_ = layer_id; }
+
+unsigned int Console::LayerID() const { return layer_id_; }
 
 void Console::NewLine() {
     cursor_column_ = 0;

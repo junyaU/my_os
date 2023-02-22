@@ -13,6 +13,8 @@ Layer& Layer::SetWindow(const std::shared_ptr<Window>& window) {
 
 std::shared_ptr<Window> Layer::GetWindow() { return window_; }
 
+Vector2D<int> Layer::GetPosition() const { return pos_; }
+
 Layer& Layer::Move(Vector2D<int> pos) {
     pos_ = pos;
     return *this;
@@ -42,7 +44,21 @@ void LayerManager::Draw(const Rectangle<int>& area) const {
     }
 }
 
-void LayerManager::Draw(unsigned int id, Vector2D<int> new_pos) const {}
+void LayerManager::Draw(unsigned int id) const {
+    bool draw = false;
+    Rectangle<int> window_area;
+    for (auto layer : layer_stack_) {
+        if (layer->ID() == id) {
+            window_area.size = layer->GetWindow()->Size();
+            window_area.pos = layer->GetPosition();
+            draw = true;
+        }
+
+        if (draw) {
+            layer->DrawTo(*screen_, window_area);
+        }
+    }
+}
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_position) {
     FindLayer(id)->Move(new_position);

@@ -11,6 +11,8 @@ class Console {
     void PutString(const char* s);
     void SetDrawer(ScreenDrawer* drawer);
     void SetWindow(const std::shared_ptr<Window>& window);
+    void SetLayerID(unsigned int layer_id);
+    unsigned int LayerID() const;
 
    private:
     void NewLine();
@@ -21,4 +23,5 @@ class Console {
     const PixelColor fg_color_, bg_color_;
     char buffer_[kRows][kColumns + 1];
     int cursor_row_, cursor_column_;
+    unsigned int layer_id_;
 };
