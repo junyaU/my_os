@@ -41,6 +41,7 @@ class LayerManager {
 
    private:
     FrameBuffer* screen_{nullptr};
+    mutable FrameBuffer back_buffer_{};
     // 全てのレイヤを格納する動的配列
     std::vector<std::unique_ptr<Layer>> layers_{};
     // レイヤの重なりを表す配列 先頭が最背面となり、末尾が最前面となる

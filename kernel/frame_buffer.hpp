@@ -15,6 +15,7 @@ class FrameBuffer {
     void Move(Vector2D<int> dst_pos, const Rectangle<int>& src);
 
     FrameBufferDrawer& Drawer() { return *drawer_; }
+    const FrameBufferConfig& Config() const { return config_; }
 
    private:
     FrameBufferConfig config_{};
