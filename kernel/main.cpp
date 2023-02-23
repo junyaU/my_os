@@ -300,8 +300,11 @@ extern "C" void KernelMainNewStack(
                          .SetWindow(mouse_window)
                          .Move(mouse_position)
                          .ID();
-    auto main_window_layer_id =
-        layer_manager->NewLayer().SetWindow(main_window).Move({300, 100}).ID();
+    auto main_window_layer_id = layer_manager->NewLayer()
+                                    .SetWindow(main_window)
+                                    .SetDraggable(true)
+                                    .Move({300, 100})
+                                    .ID();
 
     console->SetLayerID(
         layer_manager->NewLayer().SetWindow(console_window).Move({0, 0}).ID());
