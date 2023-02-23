@@ -78,7 +78,12 @@ void LayerManager::Move(unsigned int id, Vector2D<int> new_position) {
 }
 
 void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff) {
-    FindLayer(id)->MoveRelative(pos_diff);
+    auto layer = FindLayer(id);
+    const auto window_size = layer->GetWindow()->Size();
+    const auto old_pos = layer->GetPosition();
+    layer->MoveRelative(pos_diff);
+    Draw({old_pos, window_size});
+    Draw(id);
 }
 
 void LayerManager::UpDown(unsigned int id, int new_height) {
@@ -113,6 +118,32 @@ void LayerManager::Hide(unsigned int id) {
     if (pos != layer_stack_.end()) {
         layer_stack_.erase(pos);
     }
+}
+
+Layer* LayerManager::FindLayerByPoisition(Vector2D<int> pos,
+                                          unsigned int exclude_id) const {
+    auto pred = [pos, exclude_id](Layer* layer) {
+        if (layer->ID() == exclude_id) {
+            return false;
+        }
+
+        const auto& window = layer->GetWindow();
+        if (!window) {
+            return false;
+        }
+
+        const auto window_pos = layer->GetPosition();
+        const auto window_end_pos = window_pos + window->Size();
+        return window_pos.x <= pos.x && pos.x < window_end_pos.x &&
+               window_pos.y <= pos.y && pos.y < window_end_pos.y;
+    };
+
+    auto it = std::find_if(layer_stack_.rbegin(), layer_stack_.rend(), pred);
+    if (it == layer_stack_.rend()) {
+        return nullptr;
+    }
+
+    return *it;
 }
 
 Layer* LayerManager::FindLayer(unsigned int id) {
