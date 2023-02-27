@@ -129,3 +129,9 @@ const PixelColor kDesktopBGColor{45, 118, 237};
 const PixelColor kDesktopFGColor{255, 255, 255};
 
 void DrawDesktop(ScreenDrawer &drawer);
+
+extern FrameBufferConfig screen_config;
+extern ScreenDrawer *screen_drawer;
+Vector2D<int> ScreenSize();
+
+void InitializeDrawings(const FrameBufferConfig &screen_config);

@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <deque>
 #include <numeric>
 #include <vector>
 
@@ -14,10 +15,10 @@
 #include "layer.hpp"
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
+#include "message.hpp"
 #include "mouse.hpp"
 #include "paging.hpp"
 #include "pci.hpp"
-#include "queue.hpp"
 #include "segment.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
@@ -28,9 +29,6 @@
 #include "x86_descriptor.hpp"
 
 void operator delete(void *obj) noexcept {}
-
-char screen_drawer_buffer[sizeof(RGB8BitScreenDrawer)];
-ScreenDrawer *screen_drawer;
 
 char console_buf[sizeof(Console)];
 Console *console;
@@ -94,18 +92,7 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x,
 
 usb::xhci::Controller *xhc;
 
-struct Message {
-    enum Type {
-        kInterruptXHCI,
-    } type;
-};
-
-ArrayQueue<Message> *main_queue;
-
-__attribute__((interrupt)) void IntHandlerXHCI(InterruptFrame *frame) {
-    main_queue->ENQ(Message{Message::kInterruptXHCI});
-    NotifyEndOfInterrupt();
-}
+std::deque<Message> *main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
@@ -115,18 +102,7 @@ extern "C" void KernelMainNewStack(
     FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
     MemoryMap memory_map{memory_map_ref};
 
-    switch (frame_buffer_config.pixel_format) {
-        case kPixelRGBResv8BitPerColor:
-            screen_drawer = new (screen_drawer_buffer)
-                RGB8BitScreenDrawer{frame_buffer_config};
-            break;
-        case kPixelBGRResv8BitPerColor:
-            screen_drawer = new (screen_drawer_buffer)
-                BGR8BitScreenDrawer{frame_buffer_config};
-            break;
-    }
-
-    DrawDesktop(*screen_drawer);
+    InitializeDrawings(frame_buffer_config);
 
     console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
     console->SetDrawer(screen_drawer);
@@ -178,9 +154,8 @@ extern "C" void KernelMainNewStack(
         exit(1);
     }
 
-    std::array<Message, 32> main_queue_data;
-    ArrayQueue<Message> main_queue{main_queue_data};
-    ::main_queue = &main_queue;
+    ::main_queue = new std::deque<Message>(32);
+    InitializeInterrupt(main_queue);
 
     auto err = pci::ScanAllDevice();
     printk("ScanAllBus: %s\n", err.Name());
@@ -213,12 +188,12 @@ extern "C" void KernelMainNewStack(
                xhc_device->device, xhc_device->function);
     }
 
-    const uint16_t cs = GetCS();
-    SetIDTEntry(idt[InterruptVector::kXHCI],
-                MakeIDTAttr(DescriptorType::kInterruptGate, 0),
-                reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
+    // const uint16_t cs = GetCS();
+    // SetIDTEntry(idt[InterruptVector::kXHCI],
+    //             MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+    //             reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
 
-    LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+    // LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
     const uint8_t bsp_local_apic_id =
         *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
@@ -327,13 +302,13 @@ extern "C" void KernelMainNewStack(
         layer_manager->Draw(main_window_layer_id);
 
         __asm__("cli");
-        if (main_queue.Count() == 0) {
+        if (main_queue->size() == 0) {
             __asm__("sti");
             continue;
         }
 
-        Message msg = main_queue.Front();
-        main_queue.DEQ();
+        Message msg = main_queue->front();
+        main_queue->pop_front();
         __asm__("sti");
 
         switch (msg.type) {

@@ -44,3 +44,34 @@ void DrawDesktop(ScreenDrawer& drawer) {
     FillRectangle(drawer, {0, height - 50}, {width / 5, 50}, {80, 80, 80});
     DrawRectangle(drawer, {10, height - 40}, {30, 30}, {160, 160, 160});
 }
+
+FrameBufferConfig screen_config;
+ScreenDrawer* screen_drawer;
+
+Vector2D<int> ScreenSize() {
+    return {static_cast<int>(screen_config.horizontal_resolution),
+            static_cast<int>(screen_config.vertical_resolution)};
+}
+
+namespace {
+char screen_drawer_buf[sizeof(RGB8BitScreenDrawer)];
+}
+
+void InitializeDrawings(const FrameBufferConfig& screen_config) {
+    ::screen_config = screen_config;
+
+    switch (screen_config.pixel_format) {
+        case kPixelRGBResv8BitPerColor:
+            ::screen_drawer =
+                new (screen_drawer_buf) RGB8BitScreenDrawer{screen_config};
+            break;
+        case kPixelBGRResv8BitPerColor:
+            ::screen_drawer =
+                new (screen_drawer_buf) BGR8BitScreenDrawer{screen_config};
+            break;
+        default:
+            exit(1);
+    }
+
+    DrawDesktop(*screen_drawer);
+}

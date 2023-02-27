@@ -31,4 +31,6 @@ interrupt.o: interrupt.cpp interrupt.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/_ansi.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/functional \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
-  x86_descriptor.hpp
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/deque \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
+  x86_descriptor.hpp asmfunc.h message.hpp segment.hpp

@@ -2,7 +2,9 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 
+#include "message.hpp"
 #include "x86_descriptor.hpp"
 
 union InterruptDescriptorAttribute {
@@ -42,7 +44,7 @@ constexpr InterruptDescriptorAttribute MakeIDTAttr(
     return attr;
 }
 
-void SetIDTEntry(InterruptDescriptor &descriptor,
+void SetIDTEntry(InterruptDescriptor& descriptor,
                  InterruptDescriptorAttribute attr, uint64_t offset,
                  uint16_t segment_selector);
 
@@ -62,3 +64,5 @@ struct InterruptFrame {
 };
 
 void NotifyEndOfInterrupt();
+
+void InitializeInterrupt(std::deque<Message>* msg_queue);
