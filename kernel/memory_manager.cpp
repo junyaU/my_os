@@ -72,6 +72,10 @@ Error BitmapMemoryManager::Free(FrameID base_frame, size_t frame_size) {
 
 extern "C" caddr_t program_break, program_break_end;
 
+namespace {
+char memory_manager_buf[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager* memory_manager;
+
 Error InitializeHeap(BitmapMemoryManager& memory_manager) {
     const int kHeapFrames = 64 * 512;
     const auto heap_start = memory_manager.Allocate(kHeapFrames);
@@ -83,4 +87,40 @@ Error InitializeHeap(BitmapMemoryManager& memory_manager) {
         reinterpret_cast<caddr_t>(heap_start.value.ID() * kBytesPerFrame);
     program_break_end = program_break + kHeapFrames * kBytesPerFrame;
     return MAKE_ERROR(Error::kSuccess);
+}
+}  // namespace
+
+void InitializeMemoryManager(const MemoryMap& memory_map) {
+    ::memory_manager = new (memory_manager_buf) BitmapMemoryManager;
+
+    const auto memory_map_base_addr =
+        reinterpret_cast<uintptr_t>(memory_map.buffer);
+    uintptr_t available_end = 0;
+
+    for (uintptr_t iter = memory_map_base_addr;
+         iter < memory_map_base_addr + memory_map.map_size;
+         iter += memory_map.descriptor_size) {
+        auto descriptor = reinterpret_cast<const MemoryDescriptor*>(iter);
+        if (available_end < descriptor->physical_start) {
+            memory_manager->MarkAllocated(
+                FrameID{available_end / kBytesPerFrame},
+                (descriptor->physical_start - available_end) / kBytesPerFrame);
+        }
+
+        const auto physical_end = descriptor->physical_start +
+                                  descriptor->number_of_pages * kUEFIPageSize;
+        if (IsAvailable(static_cast<MemoryType>(descriptor->type))) {
+            available_end = physical_end;
+        } else {
+            memory_manager->MarkAllocated(
+                FrameID{descriptor->physical_start / kBytesPerFrame},
+                descriptor->number_of_pages * kUEFIPageSize / kBytesPerFrame);
+        }
+    }
+    memory_manager->SetMemoryRange(FrameID{1},
+                                   FrameID{available_end / kBytesPerFrame});
+
+    if (auto err = InitializeHeap(*memory_manager)) {
+        exit(1);
+    }
 }

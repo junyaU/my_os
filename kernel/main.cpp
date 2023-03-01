@@ -30,12 +30,6 @@
 
 void operator delete(void *obj) noexcept {}
 
-char console_buf[sizeof(Console)];
-Console *console;
-
-char memory_manager_buffer[sizeof(BitmapMemoryManager)];
-BitmapMemoryManager *memory_manager;
-
 int printk(const char format[], ...) {
     va_list ap;
     int result;
@@ -104,55 +98,13 @@ extern "C" void KernelMainNewStack(
 
     InitializeDrawings(frame_buffer_config);
 
-    console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
-    console->SetDrawer(screen_drawer);
+    InitializeConsole();
 
-    SetupSegments();
+    InitializeSegmentation();
 
-    const uint16_t kernel_cs = 1 << 3;
-    const uint16_t kernel_ss = 2 << 3;
-    SetDSAll(0);
-    SetCSSS(kernel_cs, kernel_ss);
+    InitializePaging();
 
-    // メモリのページング設定
-    SetupIdentityPageTable();
-
-    ::memory_manager = new (memory_manager_buffer) BitmapMemoryManager;
-    const auto memory_map_base_address =
-        reinterpret_cast<uintptr_t>(memory_map.buffer);
-
-    uintptr_t available_end = 0;
-    for (uintptr_t iter = memory_map_base_address;
-         iter < memory_map_base_address + memory_map.map_size;
-         iter += memory_map.descriptor_size) {
-        auto descriptor = reinterpret_cast<const MemoryDescriptor *>(iter);
-        if (available_end < descriptor->physical_start) {
-            memory_manager->MarkAllocated(
-                FrameID{available_end / kBytesPerFrame},
-                (descriptor->physical_start - available_end) / kBytesPerFrame);
-        }
-
-        const auto physical_end_address =
-            descriptor->physical_start +
-            descriptor->number_of_pages * kUEFIPageSize;
-
-        if (IsAvailable(static_cast<MemoryType>(descriptor->type))) {
-            available_end = physical_end_address;
-        } else {
-            memory_manager->MarkAllocated(
-                FrameID{descriptor->physical_start / kBytesPerFrame},
-                descriptor->number_of_pages * kUEFIPageSize / kBytesPerFrame);
-        }
-    }
-
-    memory_manager->SetMemoryRange(FrameID{1},
-                                   FrameID{available_end / kBytesPerFrame});
-
-    if (auto err = InitializeHeap(*memory_manager)) {
-        printk("failed to allocate pages: %s at %s:%d\n", err.Name(),
-               err.File(), err.Line());
-        exit(1);
-    }
+    InitializeMemoryManager(memory_map);
 
     ::main_queue = new std::deque<Message>(32);
     InitializeInterrupt(main_queue);
@@ -187,13 +139,6 @@ extern "C" void KernelMainNewStack(
         printk("xHC has been found: %d.%d.%d\n", xhc_device->bus,
                xhc_device->device, xhc_device->function);
     }
-
-    // const uint16_t cs = GetCS();
-    // SetIDTEntry(idt[InterruptVector::kXHCI],
-    //             MakeIDTAttr(DescriptorType::kInterruptGate, 0),
-    //             reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
-
-    // LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
     const uint8_t bsp_local_apic_id =
         *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;

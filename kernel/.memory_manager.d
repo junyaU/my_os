@@ -33,4 +33,5 @@ memory_manager.o: memory_manager.cpp memory_manager.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
   error.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+  memory_map.hpp

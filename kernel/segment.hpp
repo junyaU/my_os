@@ -36,3 +36,4 @@ const uint16_t kKernelSS = 2 << 3;
 const uint16_t kKernelDS = 0;
 
 void SetupSegments();
+void InitializeSegmentation();

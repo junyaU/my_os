@@ -41,3 +41,9 @@ void SetupSegments() {
     // CPUにgdtを新しいGDTとして登録する
     LoadGDT(sizeof(gdt) - 1, reinterpret_cast<uintptr_t>(&gdt[0]));
 }
+
+void InitializeSegmentation() {
+    SetupSegments();
+    SetDSAll(kKernelDS);
+    SetCSSS(kKernelCS, kKernelSS);
+}

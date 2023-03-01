@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "error.hpp"
+#include "memory_map.hpp"
 
 namespace {
 constexpr unsigned long long operator""_KiB(unsigned long long kib) {
@@ -59,3 +60,5 @@ class BitmapMemoryManager {
     bool GetBit(FrameID frame_id) const;
     void SetBit(FrameID frame_id, bool alllocated);
 };
+
+void InitializeMemoryManager(const MemoryMap& mamory_map);
