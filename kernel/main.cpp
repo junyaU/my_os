@@ -42,6 +42,22 @@ int printk(const char format[], ...) {
     return result;
 }
 
+std::shared_ptr<Window> main_window;
+unsigned int main_window_layer_id;
+void InitializeMainWindow() {
+    main_window = std::make_shared<Window>(160, 52, screen_config.pixel_format);
+    DrawWindow(*main_window->Drawer(), "Uchizono desu");
+
+    main_window_layer_id = layer_manager->NewLayer()
+                               .SetWindow(main_window)
+                               .Move({300, 100})
+                               .SetDraggable(true)
+                               .ID();
+
+    layer_manager->UpDown(main_window_layer_id,
+                          std::numeric_limits<int>::max());
+}
+
 unsigned int mouse_layer_id;
 Vector2D<int> screen_size;
 Vector2D<int> mouse_position;
@@ -114,6 +130,10 @@ extern "C" void KernelMainNewStack(
     screen_size.x = frame_buffer_config.horizontal_resolution;
     screen_size.y = frame_buffer_config.vertical_resolution;
 
+    InitializeLayer();
+
+    InitializeMainWindow();
+
     auto mouse_window =
         std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight,
                                  frame_buffer_config.pixel_format);
@@ -121,17 +141,6 @@ extern "C" void KernelMainNewStack(
     DrawMouseCursor(mouse_window->Drawer(), {0, 0});
     mouse_position = {200, 200};
 
-    auto main_window =
-        std::make_shared<Window>(160, 52, frame_buffer_config.pixel_format);
-    DrawWindow(*main_window->Drawer(), "UCH Window");
-
-    auto main_window_layer_id = layer_manager->NewLayer()
-                                    .SetWindow(main_window)
-                                    .SetDraggable(true)
-                                    .Move({300, 100})
-                                    .ID();
-
-    layer_manager->UpDown(main_window_layer_id, 2);
     layer_manager->UpDown(mouse_layer_id, 3);
     layer_manager->Draw({{0, 0}, screen_size});
 
