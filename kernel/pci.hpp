@@ -111,3 +111,5 @@ Error ConfigureMSIFixedDestination(const Device& dev, uint8_t apic_id,
 }
 
 ;  // namespace pci
+
+void InitializePCI();

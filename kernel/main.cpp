@@ -23,7 +23,6 @@
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
-#include "usb/xhci/trb.hpp"
 #include "usb/xhci/xhci.hpp"
 #include "window.hpp"
 #include "x86_descriptor.hpp"
@@ -84,8 +83,6 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x,
     previous_buttons = buttons;
 }
 
-usb::xhci::Controller *xhc;
-
 std::deque<Message> *main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -109,76 +106,8 @@ extern "C" void KernelMainNewStack(
     ::main_queue = new std::deque<Message>(32);
     InitializeInterrupt(main_queue);
 
-    auto err = pci::ScanAllDevice();
-    printk("ScanAllBus: %s\n", err.Name());
-
-    for (int i = 0; i < pci::num_device; ++i) {
-        const auto &device = pci::devices[i];
-        auto vender_id =
-            pci::ReadVendorId(device.bus, device.device, device.function);
-        auto class_code =
-            pci::ReadClassCode(device.bus, device.device, device.function);
-
-        printk("%d.%d.%d: vend %04x, class %08x, head %02x\n", device.bus,
-               device.device, device.function, vender_id, class_code,
-               device.header_type);
-    }
-
-    pci::Device *xhc_device = nullptr;
-    for (int i = 0; i < pci::num_device; ++i) {
-        if (pci::devices[i].class_code.Match(0x0cu, 0x03u, 0x30u)) {
-            xhc_device = &pci::devices[i];
-
-            if (0x8086 == pci::ReadVendorId(*xhc_device)) {
-                break;
-            }
-        }
-    }
-
-    if (xhc_device) {
-        printk("xHC has been found: %d.%d.%d\n", xhc_device->bus,
-               xhc_device->device, xhc_device->function);
-    }
-
-    const uint8_t bsp_local_apic_id =
-        *reinterpret_cast<const uint32_t *>(0xfee00020) >> 24;
-
-    pci::ConfigureMSIFixedDestination(
-        *xhc_device, bsp_local_apic_id, pci::MSITriggerMode::kLevel,
-        pci::MSIDeliveryMode::kFixed, InterruptVector::kXHCI, 0);
-
-    const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_device, 0);
-    printk("ReadBar: %s\n", xhc_bar.error.Name());
-    const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
-    printk("xHC mmio_base = %08lx\n", xhc_mmio_base);
-
-    usb::xhci::Controller xhc{xhc_mmio_base};
-
-    {
-        auto err = xhc.Initialize();
-
-        printk("xhc.Initialize: %s\n", err.Name());
-    }
-
-    printk("xHC starting\n");
-    xhc.Run();
-
-    ::xhc = &xhc;
-
-    usb::HIDMouseDriver::default_observer = MouseObserver;
-
-    for (int i = 1; i <= xhc.MaxPorts(); ++i) {
-        auto port = xhc.PortAt(i);
-
-        if (!port.IsConnected()) {
-            continue;
-        }
-
-        if (auto err = usb::xhci::ConfigurePort(xhc, port)) {
-            printk("failed to configure port: %s at %s:%d\n", err.Name(),
-                   err.File(), err.Line());
-        }
-    }
+    InitializePCI();
+    usb::xhci::Initialize();
 
     screen_size.x = frame_buffer_config.horizontal_resolution;
     screen_size.y = frame_buffer_config.vertical_resolution;
@@ -258,12 +187,7 @@ extern "C" void KernelMainNewStack(
 
         switch (msg.type) {
             case Message::kInterruptXHCI:
-                while (xhc.PrimaryEventRing()->HasFront()) {
-                    if (auto err = usb::xhci::ProcessEvent(xhc)) {
-                        printk("Error while ProcessEvent: %s at %s:%d\n",
-                               err.Name(), err.File(), err.Line());
-                    }
-                }
+                usb::xhci::ProcessEvents();
                 break;
             default:
                 printk("Unknown message type: %d\n", msg.type);

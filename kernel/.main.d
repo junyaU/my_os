@@ -50,7 +50,7 @@ main.o: main.cpp \
   memory_manager.hpp memory_map.hpp mouse.hpp paging.hpp pci.hpp \
   segment.hpp usb/classdriver/mouse.hpp usb/classdriver/hid.hpp \
   usb/classdriver/base.hpp usb/endpoint.hpp usb/setupdata.hpp \
-  usb/device.hpp usb/arraymap.hpp usb/memory.hpp usb/xhci/trb.hpp \
-  usb/xhci/context.hpp usb/xhci/xhci.hpp usb/xhci/registers.hpp \
-  register.hpp usb/xhci/ring.hpp usb/xhci/port.hpp usb/xhci/devmgr.hpp \
-  usb/xhci/device.hpp
+  usb/device.hpp usb/arraymap.hpp usb/memory.hpp usb/xhci/xhci.hpp \
+  usb/xhci/registers.hpp register.hpp usb/xhci/context.hpp \
+  usb/xhci/ring.hpp usb/xhci/trb.hpp usb/xhci/port.hpp \
+  usb/xhci/devmgr.hpp usb/xhci/device.hpp
