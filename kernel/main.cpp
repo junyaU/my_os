@@ -97,6 +97,8 @@ extern "C" void KernelMainNewStack(
 
     InitializeConsole();
 
+    printk("hello");
+
     InitializeSegmentation();
 
     InitializePaging();
@@ -112,12 +114,6 @@ extern "C" void KernelMainNewStack(
     screen_size.x = frame_buffer_config.horizontal_resolution;
     screen_size.y = frame_buffer_config.vertical_resolution;
 
-    auto bgWindow = std::make_shared<Window>(screen_size.x, screen_size.y,
-                                             frame_buffer_config.pixel_format);
-    auto bgDrawer = bgWindow->Drawer();
-
-    DrawDesktop(*bgDrawer);
-
     auto mouse_window =
         std::make_shared<Window>(kMouseCursorWidth, kMouseCursorHeight,
                                  frame_buffer_config.pixel_format);
@@ -129,37 +125,12 @@ extern "C" void KernelMainNewStack(
         std::make_shared<Window>(160, 52, frame_buffer_config.pixel_format);
     DrawWindow(*main_window->Drawer(), "UCH Window");
 
-    auto console_window =
-        std::make_shared<Window>(Console::kColumns * 8, Console::kRows * 16,
-                                 frame_buffer_config.pixel_format);
-    console->SetWindow(console_window);
-
-    FrameBuffer screen;
-    if (auto err = screen.Initialize(frame_buffer_config)) {
-        printk("failed to initialize frame buffer: %s at %s:%d\n", err.Name(),
-               err.File(), err.Line());
-    }
-
-    layer_manager = new LayerManager;
-    layer_manager->SetDrawer(&screen);
-
-    auto bglayer_id =
-        layer_manager->NewLayer().SetWindow(bgWindow).Move({0, 0}).ID();
-    mouse_layer_id = layer_manager->NewLayer()
-                         .SetWindow(mouse_window)
-                         .Move(mouse_position)
-                         .ID();
     auto main_window_layer_id = layer_manager->NewLayer()
                                     .SetWindow(main_window)
                                     .SetDraggable(true)
                                     .Move({300, 100})
                                     .ID();
 
-    console->SetLayerID(
-        layer_manager->NewLayer().SetWindow(console_window).Move({0, 0}).ID());
-
-    layer_manager->UpDown(bglayer_id, 0);
-    layer_manager->UpDown(console->LayerID(), 1);
     layer_manager->UpDown(main_window_layer_id, 2);
     layer_manager->UpDown(mouse_layer_id, 3);
     layer_manager->Draw({{0, 0}, screen_size});

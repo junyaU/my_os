@@ -134,4 +134,4 @@ extern FrameBufferConfig screen_config;
 extern ScreenDrawer *screen_drawer;
 Vector2D<int> ScreenSize();
 
-void InitializeDrawings(const FrameBufferConfig &screen_config);
+void InitializeDrawings(const FrameBufferConfig &);

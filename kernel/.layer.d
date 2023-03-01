@@ -43,4 +43,5 @@ layer.o: layer.cpp layer.hpp \
   error.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+  console.hpp logger.hpp
