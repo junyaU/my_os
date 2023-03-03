@@ -20,6 +20,7 @@
 #include "paging.hpp"
 #include "pci.hpp"
 #include "segment.hpp"
+#include "timer.hpp"
 #include "usb/classdriver/mouse.hpp"
 #include "usb/device.hpp"
 #include "usb/memory.hpp"
@@ -94,6 +95,8 @@ extern "C" void KernelMainNewStack(
 
     layer_manager->Draw({{0, 0}, ScreenSize()});
 
+    InitializeLAPICTimer();
+
     char str[128];
     unsigned int count = 0;
 
@@ -118,6 +121,9 @@ extern "C" void KernelMainNewStack(
         switch (msg.type) {
             case Message::kInterruptXHCI:
                 usb::xhci::ProcessEvents();
+                break;
+            case Message::kInterruptLAPICTimer:
+                printk("Hikakin TV everyday \n");
                 break;
             default:
                 printk("Unknown message type: %d\n", msg.type);
