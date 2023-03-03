@@ -33,4 +33,9 @@ interrupt.o: interrupt.cpp interrupt.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/deque \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__split_buffer \
-  message.hpp x86_descriptor.hpp asmfunc.h segment.hpp timer.hpp
+  message.hpp x86_descriptor.hpp asmfunc.h segment.hpp timer.hpp \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/queue \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/vector \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/climits \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/limits.h

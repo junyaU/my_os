@@ -64,7 +64,8 @@
     "algorithm": "cpp",
     "__tree": "cpp",
     "map": "cpp",
-    "deque": "cpp"
+    "deque": "cpp",
+    "queue": "cpp"
   },
   "C_Cpp.errorSquiggles": "Enabled"
 }
