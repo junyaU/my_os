@@ -98,11 +98,13 @@ extern "C" void KernelMainNewStack(
     InitializeLAPICTimer();
 
     char str[128];
-    unsigned int count = 0;
 
     while (true) {
-        ++count;
-        sprintf(str, "%010u", count);
+        __asm__("cli");
+        const auto tick = timer_manager->CurrentTick();
+        __asm__("sti");
+
+        sprintf(str, "%010lu", tick);
         FillRectangle(*main_window->Drawer(), {24, 28}, {8 * 10, 16},
                       {0xc6, 0xc6, 0xc6});
         WriteString(*main_window->Drawer(), {24, 28}, str, {0, 0, 0});
@@ -110,7 +112,7 @@ extern "C" void KernelMainNewStack(
 
         __asm__("cli");
         if (main_queue->size() == 0) {
-            __asm__("sti");
+            __asm__("sti\n\thlt");
             continue;
         }
 
@@ -129,8 +131,6 @@ extern "C" void KernelMainNewStack(
                 printk("Unknown message type: %d\n", msg.type);
         }
     }
-
-    while (1) __asm__("hlt");
 }
 
 extern "C" void __cxa_pure_virtual() {
