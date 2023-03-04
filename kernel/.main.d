@@ -40,7 +40,8 @@ main.o: main.cpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__bit_reference \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/climits \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/limits.h \
-  asmfunc.h console.hpp drawing.hpp frame_buffer_config.hpp window.hpp \
+  acpi.hpp asmfunc.h console.hpp drawing.hpp frame_buffer_config.hpp \
+  window.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/optional \
   frame_buffer.hpp error.hpp font.hpp interrupt.hpp message.hpp \
   x86_descriptor.hpp layer.hpp \
