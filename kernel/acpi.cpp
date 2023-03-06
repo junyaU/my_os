@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "asmfunc.h"
 #include "logger.hpp"
 
 namespace {
@@ -72,6 +73,27 @@ size_t XSDT::Count() const {
     return (this->header.length - sizeof(DescriptionHeader)) / sizeof(uint64_t);
 }
 
+const FADT* fadt;
+
+void WaitMilliseconds(unsigned long msec) {
+    const uint32_t start = IoIn32(fadt->pm_tmr_blk);
+    uint32_t end = start + kPMTimerFreq * msec / 1000;
+
+    const bool pm_timer_32 = (fadt->flags >> 8) & 1;
+    if (!pm_timer_32) {
+        end &= 0x00ffffffu;
+    }
+
+    bool isOverFlow = end < start;
+    if (isOverFlow) {
+        while (IoIn32(fadt->pm_tmr_blk) >= start)
+            ;
+    }
+
+    while (IoIn32(fadt->pm_tmr_blk) < end)
+        ;
+}
+
 void Initialize(const RSDP& rsdp) {
     if (!rsdp.IsValid()) {
         Log(kError, "RSDP is not valid\n");
@@ -87,7 +109,9 @@ void Initialize(const RSDP& rsdp) {
     fadt = nullptr;
     for (int i = 0; i < xsdt.Count(); ++i) {
         const auto& entry = xsdt[i];
+
         if (entry.IsValid("FACP")) {
+            fadt = reinterpret_cast<const FADT*>(&entry);
             break;
         }
     }

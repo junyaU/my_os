@@ -14,6 +14,7 @@
 #include "frame_buffer_config.hpp"
 #include "interrupt.hpp"
 #include "layer.hpp"
+#include "logger.hpp"
 #include "memory_manager.hpp"
 #include "memory_map.hpp"
 #include "message.hpp"
@@ -74,7 +75,8 @@ extern "C" void KernelMainNewStack(
 
     InitializeConsole();
 
-    printk("hello");
+    SetLogLevel(kWarn);
+    printk("nice");
 
     InitializeSegmentation();
 
@@ -100,7 +102,6 @@ extern "C" void KernelMainNewStack(
     InitializeLAPICTimer(*main_queue);
 
     timer_manager->AddTimer(Timer(200, 2));
-    timer_manager->AddTimer(Timer(600, -1));
 
     char str[128];
 

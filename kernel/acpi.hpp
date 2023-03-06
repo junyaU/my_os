@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 // advanced configuration and power interface
@@ -28,7 +29,7 @@ struct DescriptionHeader {
     uint32_t length;
     uint8_t revision;
     uint8_t checksum;
-    char oem_id[16];
+    char oem_id[6];
     char oem_table_id[8];
     uint32_t oem_revision;
     uint32_t creator_id;
@@ -40,6 +41,7 @@ struct DescriptionHeader {
 // extended system description table
 struct XSDT {
     DescriptionHeader header;
+
     const DescriptionHeader& operator[](size_t i) const;
     size_t Count() const;
 } __attribute__((packed));
@@ -47,13 +49,19 @@ struct XSDT {
 struct FADT {
     DescriptionHeader header;
     char reserved1[76 - sizeof(header)];
+
+    // IOポート
     uint32_t pm_tmr_blk;
+
     char reserved2[112 - 80];
     uint32_t flags;
     char reserved3[276 - 116];
 } __attribute__((packed));
 
 extern const FADT* fadt;
+// acpi pmタイマの周波数
+const int kPMTimerFreq = 3579545;
 
+void WaitMilliseconds(unsigned long msec);
 void Initialize(const RSDP& rsdp);
 }  // namespace acpi
