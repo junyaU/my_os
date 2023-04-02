@@ -75,7 +75,7 @@ size_t XSDT::Count() const {
 
 const FADT* fadt;
 
-void WaitMilliseconds(unsigned long msec) {
+void Wait(unsigned long msec) {
     const uint32_t start = IoIn32(fadt->pm_tmr_blk);
     uint32_t end = start + kPMTimerFreq * msec / 1000;
 

@@ -76,7 +76,6 @@ extern "C" void KernelMainNewStack(
     InitializeConsole();
 
     SetLogLevel(kWarn);
-    printk("nice");
 
     InitializeSegmentation();
 

@@ -20,16 +20,17 @@ void InitializeLAPICTimer(std::deque<Message>& msg_queue) {
     timer_manager = new TimerManager(msg_queue);
 
     divide_config = 0b1011;
-    lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer;
+    lvt_timer = (0b001 << 16);
 
     StartLAPICTimer();
-    acpi::WaitMilliseconds(100);
+
+    acpi::Wait(100);
     const auto elapsed = LAPICTimerElapsed();
+
     StopLAPICTimer();
 
     lapic_timer_freq = static_cast<unsigned long>(elapsed) * 10;
 
-    divide_config = 0b1011;
     lvt_timer = (0b010 << 16) | InterruptVector::kLAPICTimer;
     initial_count = lapic_timer_freq / kTimerFreq;
 }

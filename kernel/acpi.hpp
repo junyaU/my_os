@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 
-// advanced configuration and power interface
+// advanced configuration and power interface]
 namespace acpi {
 //  root system description pointer
 struct RSDP {
@@ -62,6 +62,6 @@ extern const FADT* fadt;
 // acpi pmタイマの周波数
 const int kPMTimerFreq = 3579545;
 
-void WaitMilliseconds(unsigned long msec);
+void Wait(unsigned long msec);
 void Initialize(const RSDP& rsdp);
 }  // namespace acpi
