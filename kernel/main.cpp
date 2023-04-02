@@ -13,6 +13,7 @@
 #include "font.hpp"
 #include "frame_buffer_config.hpp"
 #include "interrupt.hpp"
+#include "keyboard.hpp"
 #include "layer.hpp"
 #include "logger.hpp"
 #include "memory_manager.hpp"
@@ -100,7 +101,9 @@ extern "C" void KernelMainNewStack(
     acpi::Initialize(acpi_table);
     InitializeLAPICTimer(*main_queue);
 
-    timer_manager->AddTimer(Timer(200, 2));
+    InitializeKeyboard(*main_queue);
+
+    // timer_manager->AddTimer(Timer(200, 2));
 
     char str[128];
 
@@ -135,6 +138,11 @@ extern "C" void KernelMainNewStack(
                 if (msg.arg.timer.value > 0) {
                     timer_manager->AddTimer(Timer(msg.arg.timer.timeout + 100,
                                                   msg.arg.timer.value + 1));
+                }
+                break;
+            case Message::kKeyPush:
+                if (msg.arg.keyboard.ascii != 0) {
+                    printk("%c", msg.arg.keyboard.ascii);
                 }
                 break;
             default:
