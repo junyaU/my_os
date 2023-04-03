@@ -9,18 +9,18 @@
 #include <array>
 
 #include "error.hpp"
-#include "usb/setupdata.hpp"
-#include "usb/endpoint.hpp"
 #include "usb/arraymap.hpp"
+#include "usb/endpoint.hpp"
+#include "usb/setupdata.hpp"
 
 namespace usb {
-  class ClassDriver;
+class ClassDriver;
 
-  class Device {
+class Device {
    public:
     virtual ~Device();
-    virtual Error ControlIn(EndpointID ep_id, SetupData setup_data,
-                            void* buf, int len, ClassDriver* issuer);
+    virtual Error ControlIn(EndpointID ep_id, SetupData setup_data, void* buf,
+                            int len, ClassDriver* issuer);
     virtual Error ControlOut(EndpointID ep_id, SetupData setup_data,
                              const void* buf, int len, ClassDriver* issuer);
     virtual Error InterruptIn(EndpointID ep_id, void* buf, int len);
@@ -70,11 +70,10 @@ namespace usb {
      * ControlOut または ControlIn を発行したときに発行元が登録される．
      */
     ArrayMap<SetupData, ClassDriver*, 4> event_waiters_{};
-  };
+};
 
-  Error GetDescriptor(Device& dev, EndpointID ep_id,
-                      uint8_t desc_type, uint8_t desc_index,
-                      void* buf, int len, bool debug = false);
-  Error SetConfiguration(Device& dev, EndpointID ep_id,
-                         uint8_t config_value, bool debug = false);
-}
+Error GetDescriptor(Device& dev, EndpointID ep_id, uint8_t desc_type,
+                    uint8_t desc_index, void* buf, int len, bool debug = false);
+Error SetConfiguration(Device& dev, EndpointID ep_id, uint8_t config_value,
+                       bool debug = false);
+}  // namespace usb

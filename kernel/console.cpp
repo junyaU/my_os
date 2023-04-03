@@ -23,8 +23,8 @@ void Console::PutString(const char* s) {
 
         if (cursor_column_ < kColumns - 1) {
             WriteAscii(*drawer_,
-                       Vector2D<int>{FONT_HORIZONTAL_PIXELS * cursor_column_,
-                                     FONT_VERTICAL_PIXELS * cursor_row_},
+                       Vector2D<int>{kFontHorizonPixels * cursor_column_,
+                                     kFontVerticalPixels * cursor_row_},
                        *s, fg_color_);
 
             buffer_[cursor_row_][cursor_column_] = *s;
@@ -70,21 +70,21 @@ void Console::NewLine() {
     }
 
     if (window_) {
-        Rectangle<int> move_src{{0, FONT_VERTICAL_PIXELS},
-                                {FONT_HORIZONTAL_PIXELS * kColumns,
-                                 FONT_VERTICAL_PIXELS * (kRows - 1)}};
+        Rectangle<int> move_src{
+            {0, kFontVerticalPixels},
+            {kFontHorizonPixels * kColumns, kFontVerticalPixels * (kRows - 1)}};
         window_->Move({0, 0}, move_src);
-        FillRectangle(*drawer_, {0, FONT_VERTICAL_PIXELS * (kRows - 1)},
-                      {FONT_HORIZONTAL_PIXELS * kColumns, FONT_VERTICAL_PIXELS},
+        FillRectangle(*drawer_, {0, kFontVerticalPixels * (kRows - 1)},
+                      {kFontHorizonPixels * kColumns, kFontVerticalPixels},
                       bg_color_);
     } else {
-        FillRectangle(*drawer_, {0, 0},
-                      {FONT_HORIZONTAL_PIXELS * kColumns,
-                       FONT_VERTICAL_PIXELS * (kRows - 1)},
-                      bg_color_);
+        FillRectangle(
+            *drawer_, {0, 0},
+            {kFontHorizonPixels * kColumns, kFontVerticalPixels * (kRows - 1)},
+            bg_color_);
         for (int row = 0; row < kRows; row++) {
             memcpy(buffer_[row], buffer_[row + 1], kColumns + 1);
-            WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+            WriteString(*drawer_, Vector2D<int>{0, kFontVerticalPixels * row},
                         buffer_[row], fg_color_);
         }
         memset(buffer_[kRows - 1], 0, kColumns + 1);
@@ -93,7 +93,7 @@ void Console::NewLine() {
 
 void Console::Refresh() {
     for (int row = 0; row < kRows; ++row) {
-        WriteString(*drawer_, Vector2D<int>{0, FONT_VERTICAL_PIXELS * row},
+        WriteString(*drawer_, Vector2D<int>{0, kFontVerticalPixels * row},
                     buffer_[row], fg_color_);
     }
 }

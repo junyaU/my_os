@@ -62,6 +62,55 @@ void InitializeMainWindow() {
                           std::numeric_limits<int>::max());
 }
 
+std::shared_ptr<Window> text_window;
+unsigned int text_window_layer_id;
+void InitializeTextWindow() {
+    const int width = 160;
+    const int height = 52;
+    text_window =
+        std::make_shared<Window>(width, height, screen_config.pixel_format);
+    DrawWindow(*text_window->Drawer(), "Text Box Test");
+    DrawTextbox(*text_window->Drawer(), {4, 24}, {width - 8, height - 24 - 4});
+
+    text_window_layer_id = layer_manager->NewLayer()
+                               .SetWindow(text_window)
+                               .SetDraggable(true)
+                               .Move({350, 200})
+                               .ID();
+
+    layer_manager->UpDown(text_window_layer_id,
+                          std::numeric_limits<int>::max());
+}
+
+int text_window_index;
+void InputTextWindow(char c) {
+    if (c == 0) {
+        return;
+    }
+
+    const int vertical_margin = 8;
+
+    auto pos = []() {
+        return Vector2D<int>{
+            vertical_margin + kFontHorizonPixels * text_window_index, 24 + 6};
+    };
+
+    const int max_chars =
+        (text_window->Width() - vertical_margin * 2) / kFontHorizonPixels;
+
+    if (c == '\b' && text_window_index > 0) {
+        --text_window_index;
+        FillRectangle(*text_window->Drawer(), pos(),
+                      {kFontHorizonPixels, kFontVerticalPixels},
+                      ToColor(0xffffff));
+    } else if (c >= ' ' && text_window_index < max_chars) {
+        WriteAscii(*text_window->Drawer(), pos(), c, ToColor(0));
+        ++text_window_index;
+    }
+
+    layer_manager->Draw(text_window_layer_id);
+}
+
 std::deque<Message> *main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -93,6 +142,8 @@ extern "C" void KernelMainNewStack(
     InitializeLayer();
 
     InitializeMainWindow();
+
+    InitializeTextWindow();
 
     InitializeMouse();
 
@@ -141,9 +192,7 @@ extern "C" void KernelMainNewStack(
                 }
                 break;
             case Message::kKeyPush:
-                if (msg.arg.keyboard.ascii != 0) {
-                    printk("%c", msg.arg.keyboard.ascii);
-                }
+                InputTextWindow(msg.arg.keyboard.ascii);
                 break;
             default:
                 printk("Unknown message type: %d\n", msg.type);

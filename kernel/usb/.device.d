@@ -1,4 +1,4 @@
-device.o: usb/device.cpp usb/device.hpp \
+usb/device.o: usb/device.cpp usb/device.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__tuple \
@@ -34,8 +34,8 @@ device.o: usb/device.cpp usb/device.hpp \
   error.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
-  usb/setupdata.hpp usb/endpoint.hpp usb/arraymap.hpp \
+  usb/arraymap.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/optional \
-  usb/descriptor.hpp usb/classdriver/base.hpp \
+  usb/endpoint.hpp usb/setupdata.hpp logger.hpp usb/classdriver/base.hpp \
   usb/classdriver/keyboard.hpp usb/classdriver/hid.hpp \
-  usb/classdriver/mouse.hpp logger.hpp
+  usb/classdriver/mouse.hpp usb/descriptor.hpp

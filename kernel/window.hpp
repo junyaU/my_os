@@ -52,3 +52,5 @@ class Window {
 };
 
 void DrawWindow(ScreenDrawer& drawer, const char* title);
+
+void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size);

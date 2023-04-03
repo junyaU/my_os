@@ -4,8 +4,8 @@
 
 #include "drawing.hpp"
 
-#define FONT_HORIZONTAL_PIXELS 8
-#define FONT_VERTICAL_PIXELS 16
+const int kFontHorizonPixels = 8;
+const int kFontVerticalPixels = 16;
 
 void WriteAscii(ScreenDrawer& drawer, Vector2D<int> pos, char c,
                 const PixelColor& color);

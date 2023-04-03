@@ -1,4 +1,4 @@
-keyboard.o: usb/classdriver/keyboard.cpp usb/classdriver/keyboard.hpp \
+usb/classdriver/keyboard.o: usb/classdriver/keyboard.cpp usb/classdriver/keyboard.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/functional \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/__config \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/type_traits \
@@ -29,11 +29,11 @@ keyboard.o: usb/classdriver/keyboard.cpp usb/classdriver/keyboard.hpp \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/assert.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/_ansi.h \
   usb/classdriver/hid.hpp usb/classdriver/base.hpp error.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/array \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/algorithm \
   /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/bit \
-  usb/endpoint.hpp usb/setupdata.hpp usb/memory.hpp usb/device.hpp \
-  usb/arraymap.hpp \
-  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/optional
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/cstdio \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/stdio.h \
+  usb/endpoint.hpp usb/setupdata.hpp usb/device.hpp usb/arraymap.hpp \
+  /Users/uchienuruunari/osbook/devenv/x86_64-elf/include/c++/v1/optional \
+  usb/memory.hpp
