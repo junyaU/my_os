@@ -220,9 +220,10 @@ extern "C" void KernelMainNewStack(
     bool textbox_cursor_visible = false;
 
     InitializeTask();
-    task_manager->NewTask().InitContext(TaskB, 45);
-    task_manager->NewTask().InitContext(TaskIdle, 0xdeadbeef);
-    task_manager->NewTask().InitContext(TaskIdle, 0xcafebabe);
+    const uint64_t task_b_id =
+        task_manager->NewTask().InitContext(TaskB, 45).Wakeup().ID();
+    task_manager->NewTask().InitContext(TaskIdle, 0xdeadbeef).Wakeup();
+    task_manager->NewTask().InitContext(TaskIdle, 0xcafebabe).Wakeup();
 
     char str[128];
 
@@ -265,6 +266,13 @@ extern "C" void KernelMainNewStack(
                 break;
             case Message::kKeyPush:
                 InputTextWindow(msg.arg.keyboard.ascii);
+                if (msg.arg.keyboard.ascii == 's') {
+                    printk("sleep TaskB: %s\n",
+                           task_manager->Sleep(task_b_id).Name());
+                } else if (msg.arg.keyboard.ascii == 'w') {
+                    printk("wakeup TaskB: %s\n",
+                           task_manager->Wakeup(task_b_id).Name());
+                }
                 break;
             default:
                 printk("Unknown message type: %d\n", msg.type);
