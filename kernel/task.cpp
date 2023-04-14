@@ -142,7 +142,7 @@ Error TaskManager::Sleep(uint64_t id) {
 
 void TaskManager::Wakeup(Task* task, int level) {
     if (task->Running()) {
-        // change level
+        ChangeLevelRunning(task, level);
         return;
     }
 
