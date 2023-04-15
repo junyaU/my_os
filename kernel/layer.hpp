@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "drawing.hpp"
+#include "message.hpp"
 #include "window.hpp"
 
 class Layer {
@@ -59,3 +60,5 @@ class LayerManager {
 extern LayerManager* layer_manager;
 
 void InitializeLayer();
+
+void ProcessLayerMessage(const Message& msg);
