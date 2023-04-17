@@ -133,9 +133,9 @@ void TaskB(uint64_t task_id, int64_t data) {
     while (true) {
         ++count;
         sprintf(str, "%10d", count);
-        FillRectangle(*task_b_window->Drawer(), {24, 28}, {8 * 10, 16},
+        FillRectangle(*task_b_window->InnerDrawer(), {20, 4}, {8 * 10, 16},
                       {0xc6, 0xc6, 0xc6});
-        WriteString(*task_b_window->Drawer(), {24, 28}, str, {0, 0, 0});
+        WriteString(*task_b_window->InnerDrawer(), {20, 4}, str, {0, 0, 0});
 
         Message msg{Message::kLayer, task_id};
         msg.arg.layer.layer_id = task_b_window_layer_id;
@@ -196,7 +196,6 @@ extern "C" void KernelMainNewStack(
     InitializeTaskBWindow();
 
     layer_manager->Draw({{0, 0}, ScreenSize()});
-    active_layer->Activate(task_b_window_layer_id);
 
     acpi::Initialize(acpi_table);
     InitializeLAPICTimer();
@@ -217,6 +216,8 @@ extern "C" void KernelMainNewStack(
     InitializeKeyboard();
     InitializeMouse();
 
+    active_layer->Activate(task_b_window_layer_id);
+
     char str[128];
 
     while (true) {
@@ -225,9 +226,9 @@ extern "C" void KernelMainNewStack(
         __asm__("sti");
 
         sprintf(str, "%010lu", tick);
-        FillRectangle(*main_window->Drawer(), {24, 28}, {8 * 10, 16},
+        FillRectangle(*main_window->InnerDrawer(), {20, 4}, {8 * 10, 16},
                       {0xc6, 0xc6, 0xc6});
-        WriteString(*main_window->Drawer(), {24, 28}, str, {0, 0, 0});
+        WriteString(*main_window->InnerDrawer(), {20, 4}, str, {0, 0, 0});
         layer_manager->Draw(main_window_layer_id);
 
         __asm__("cli");
