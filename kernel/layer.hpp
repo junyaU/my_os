@@ -44,6 +44,8 @@ class LayerManager {
     void Hide(unsigned int id);
     Layer* FindLayerByPoisition(Vector2D<int> pos,
                                 unsigned int exclude_id) const;
+    Layer* FindLayer(unsigned int id);
+    int GetHeight(unsigned int id);
 
    private:
     FrameBuffer* screen_{nullptr};
@@ -53,11 +55,24 @@ class LayerManager {
     // レイヤの重なりを表す配列 先頭が最背面となり、末尾が最前面となる
     std::vector<Layer*> layer_stack_{};
     unsigned int latest_id_{0};
-
-    Layer* FindLayer(unsigned int id);
 };
 
 extern LayerManager* layer_manager;
+
+class ActiveLayer {
+   public:
+    ActiveLayer(LayerManager& manager);
+    void SetMouseLayer(unsigned int mouse_layer);
+    void Activate(unsigned int layer_id);
+    unsigned int GetActiveLayer() const { return active_layer_; }
+
+   private:
+    LayerManager& manager_;
+    unsigned int active_layer_{0};
+    unsigned int mouse_layer_{0};
+};
+
+extern ActiveLayer* active_layer;
 
 void InitializeLayer();
 

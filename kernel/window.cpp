@@ -71,6 +71,26 @@ void Window::Move(Vector2D<int> dst_pos, const Rectangle<int>& src) {
     shadow_buffer_.Move(dst_pos, src);
 }
 
+ToplevelWindow::ToplevelWindow(int width, int height, PixelFormat shadow_format,
+                               const std::string& title)
+    : Window{width, height, shadow_format}, title_{title} {
+    DrawWindow(*Drawer(), title_.c_str());
+}
+
+void ToplevelWindow::Activate() {
+    Window::Activate();
+    DrawWindowTitle(*Drawer(), title_.c_str(), true);
+}
+
+void ToplevelWindow::Deactivate() {
+    Window::Deactivate();
+    DrawWindowTitle(*Drawer(), title_.c_str(), false);
+}
+
+Vector2D<int> ToplevelWindow::InnerSize() const {
+    return Size() - kTopLeftMargin - kBottomRightMargin;
+}
+
 namespace {
 const int kCloseButtonWidth = 16;
 const int kCloseButtonHeight = 14;
@@ -86,24 +106,49 @@ const char close_button[kCloseButtonHeight][kCloseButtonWidth + 1] = {
 
 void DrawWindow(ScreenDrawer& drawer, const char* title) {
     auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,
-                               uint32_t color) {
-        FillRectangle(drawer, pos, size, ToColor(color));
+                               uint32_t c) {
+        FillRectangle(drawer, pos, size, ToColor(c));
+    };
+    const auto win_w = drawer.Width();
+    const auto win_h = drawer.Height();
+
+    fill_rect({0, 0}, {win_w, 1}, 0xc6c6c6);
+    fill_rect({1, 1}, {win_w - 2, 1}, 0xffffff);
+    fill_rect({0, 0}, {1, win_h}, 0xc6c6c6);
+    fill_rect({1, 1}, {1, win_h - 2}, 0xffffff);
+    fill_rect({win_w - 2, 1}, {1, win_h - 2}, 0x848484);
+    fill_rect({win_w - 1, 0}, {1, win_h}, 0x000000);
+    fill_rect({2, 2}, {win_w - 4, win_h - 4}, 0xc6c6c6);
+    fill_rect({1, win_h - 2}, {win_w - 2, 1}, 0x848484);
+    fill_rect({0, win_h - 1}, {win_w, 1}, 0x000000);
+
+    DrawWindowTitle(drawer, title, false);
+}
+
+void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size) {
+    auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,
+                               uint32_t c) {
+        FillRectangle(drawer, pos, size, ToColor(c));
     };
 
+    // fill main box
+    fill_rect(pos + Vector2D<int>{1, 1}, size - Vector2D<int>{2, 2}, 0xffffff);
+
+    // draw border lines
+    fill_rect(pos, {size.x, 1}, 0x848484);
+    fill_rect(pos, {1, size.y}, 0x848484);
+    fill_rect(pos + Vector2D<int>{0, size.y}, {size.x, 1}, 0xc6c6c6);
+    fill_rect(pos + Vector2D<int>{size.x, 0}, {1, size.y}, 0xc6c6c6);
+}
+
+void DrawWindowTitle(ScreenDrawer& drawer, const char* title, bool active) {
     const auto window_width = drawer.Width();
-    const auto window_height = drawer.Height();
+    uint32_t bgcolor = 0x848484;
+    if (active) {
+        bgcolor = 0x000084;
+    }
 
-    fill_rect({0, 0}, {window_width, 1}, 0xc6c6c6);
-    fill_rect({1, 1}, {window_width - 2, 1}, 0xffffff);
-    fill_rect({0, 0}, {1, window_height}, 0xc6c6c6);
-    fill_rect({1, 1}, {1, window_height - 2}, 0xffffff);
-    fill_rect({window_width - 2, 1}, {1, window_height - 2}, 0x848484);
-    fill_rect({window_width - 1, 0}, {1, window_height}, 0x000000);
-    fill_rect({2, 2}, {window_width - 4, window_height - 4}, 0xc6c6c6);
-    fill_rect({3, 3}, {window_width - 6, 18}, 0x000084);
-    fill_rect({1, window_height - 2}, {window_width - 2, 1}, 0x848484);
-    fill_rect({0, window_height - 1}, {window_width, 1}, 0x000000);
-
+    FillRectangle(drawer, {3, 3}, {window_width - 6, 18}, ToColor(bgcolor));
     WriteString(drawer, {24, 4}, title, ToColor(0xffffff));
 
     for (int y = 0; y < kCloseButtonHeight; ++y) {
@@ -121,20 +166,4 @@ void DrawWindow(ScreenDrawer& drawer, const char* title) {
             drawer.Draw({window_width - 5 - kCloseButtonWidth + x, 5 + y}, c);
         }
     }
-}
-
-void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size) {
-    auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,
-                               uint32_t c) {
-        FillRectangle(drawer, pos, size, ToColor(c));
-    };
-
-    // fill main box
-    fill_rect(pos + Vector2D<int>{1, 1}, size - Vector2D<int>{2, 2}, 0xffffff);
-
-    // draw border lines
-    fill_rect(pos, {size.x, 1}, 0x848484);
-    fill_rect(pos, {1, size.y}, 0x848484);
-    fill_rect(pos + Vector2D<int>{0, size.y}, {size.x, 1}, 0xc6c6c6);
-    fill_rect(pos + Vector2D<int>{size.x, 0}, {1, size.y}, 0xc6c6c6);
 }

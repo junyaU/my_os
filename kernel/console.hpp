@@ -29,3 +29,5 @@ class Console {
 extern Console* console;
 
 void InitializeConsole();
+
+int printk(const char format[], ...);
