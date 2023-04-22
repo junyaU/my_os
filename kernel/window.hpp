@@ -59,6 +59,8 @@ class ToplevelWindow : public Window {
    public:
     static constexpr Vector2D<int> kTopLeftMargin{4, 24};
     static constexpr Vector2D<int> kBottomRightMargin{4, 4};
+    static constexpr int kMarginX = kTopLeftMargin.x + kBottomRightMargin.x;
+    static constexpr int kMarginY = kTopLeftMargin.y + kBottomRightMargin.y;
 
     class InnerAreaDrawer : public ScreenDrawer {
        public:
@@ -96,3 +98,4 @@ class ToplevelWindow : public Window {
 void DrawWindow(ScreenDrawer& drawer, const char* title);
 void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size);
 void DrawWindowTitle(ScreenDrawer& drawer, const char* title, bool active);
+void DrawTerminal(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size);

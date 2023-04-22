@@ -106,11 +106,11 @@ void TaskManager::SwitchTask(bool current_sleep) {
                 break;
             }
         }
-
-        Task* next_task = running_[current_level_].front();
-
-        SwitchContext(&next_task->Context(), &current_task->Context());
     }
+
+    Task* next_task = running_[current_level_].front();
+
+    SwitchContext(&next_task->Context(), &current_task->Context());
 }
 
 void TaskManager::Sleep(Task* task) {
@@ -125,18 +125,7 @@ void TaskManager::Sleep(Task* task) {
         return;
     }
 
-    auto it = std::find(running_[current_level_].begin(),
-                        running_[current_level_].end(), task);
-    if (it == running_[current_level_].begin()) {
-        SwitchTask(true);
-        return;
-    }
-
-    if (it == running_[current_level_].end()) {
-        return;
-    }
-
-    running_[current_level_].erase(it);
+    Erase(running_[task->Level()], task);
 }
 
 Error TaskManager::Sleep(uint64_t id) {

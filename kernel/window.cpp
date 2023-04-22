@@ -3,6 +3,25 @@
 #include "font.hpp"
 #include "logger.hpp"
 
+namespace {
+void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size,
+                 const PixelColor& background, const PixelColor& border_light,
+                 const PixelColor& border_dark) {
+    auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,
+                               const PixelColor& color) {
+        FillRectangle(drawer, pos, size, color);
+    };
+
+    fill_rect(pos + Vector2D<int>{1, 1}, size - Vector2D<int>{2, 2},
+              background);
+
+    fill_rect(pos, {size.x, 1}, border_dark);
+    fill_rect(pos, {1, size.y}, border_dark);
+    fill_rect(pos + Vector2D<int>{0, size.y}, {size.x, 1}, border_light);
+    fill_rect(pos + Vector2D<int>{size.x, 0}, {1, size.y}, border_light);
+}
+}  // namespace
+
 Window::Window(int width, int height, PixelFormat shadow_format)
     : width_{width}, height_{height} {
     data_.resize(height);
@@ -126,19 +145,13 @@ void DrawWindow(ScreenDrawer& drawer, const char* title) {
 }
 
 void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size) {
-    auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,
-                               uint32_t c) {
-        FillRectangle(drawer, pos, size, ToColor(c));
-    };
+    DrawTextbox(drawer, pos, size, ToColor(0xffffff), ToColor(0xc6c6c6),
+                ToColor(0x848484));
+}
 
-    // fill main box
-    fill_rect(pos + Vector2D<int>{1, 1}, size - Vector2D<int>{2, 2}, 0xffffff);
-
-    // draw border lines
-    fill_rect(pos, {size.x, 1}, 0x848484);
-    fill_rect(pos, {1, size.y}, 0x848484);
-    fill_rect(pos + Vector2D<int>{0, size.y}, {size.x, 1}, 0xc6c6c6);
-    fill_rect(pos + Vector2D<int>{size.x, 0}, {1, size.y}, 0xc6c6c6);
+void DrawTerminal(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size) {
+    DrawTextbox(drawer, pos, size, ToColor(0x000000), ToColor(0xc6c6c6),
+                ToColor(0x848484));
 }
 
 void DrawWindowTitle(ScreenDrawer& drawer, const char* title, bool active) {
