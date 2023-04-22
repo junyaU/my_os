@@ -3,6 +3,7 @@
 #include "console.hpp"
 #include "font.hpp"
 #include "layer.hpp"
+#include "pci.hpp"
 
 Terminal::Terminal() {
     window_ = std::make_shared<ToplevelWindow>(
@@ -135,6 +136,19 @@ void Terminal::ExecuteLine() {
             {0, 0, 0});
 
         cursor_pos_.y = 0;
+    } else if (strcmp(command, "lspci") == 0) {
+        char s[64];
+        for (int i = 0; i < pci::num_device; ++i) {
+            const auto& dev = pci::devices[i];
+            auto vendor_id =
+                pci::ReadVendorId(dev.bus, dev.device, dev.function);
+            sprintf(s,
+                    "%02x:%02x.%d vend=%04x head=%02x class=%02x.%02x.%02x\n",
+                    dev.bus, dev.device, dev.function, vendor_id,
+                    dev.header_type, dev.class_code.base, dev.class_code.sub,
+                    dev.class_code.interface);
+            Print(s);
+        }
     } else if (command[0] != 0) {
         Print("unknown command: ");
         Print(command);
