@@ -14,6 +14,8 @@ Terminal::Terminal() {
 
     layer_id_ =
         layer_manager->NewLayer().SetWindow(window_).SetDraggable(true).ID();
+
+    Print(">");
 }
 
 Rectangle<int> Terminal::BlinkCursor() {
@@ -52,18 +54,22 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
             Scroll1();
         }
 
+        ExecuteLine();
+        Print(">");
         draw_area.pos = ToplevelWindow::kTopLeftMargin;
         draw_area.size = window_->InnerSize();
-    } else if (ascii == '\b' && cursor_pos_.x > 0) {
-        --cursor_pos_.x;
-        FillRectangle(*window_->Drawer(), CalcCursorPos(),
-                      {kFontHorizonPixels, kFontVerticalPixels}, {0, 0, 0});
+    } else if (ascii == '\b') {
+        if (cursor_pos_.x > 0) {
+            --cursor_pos_.x;
+            FillRectangle(*window_->Drawer(), CalcCursorPos(),
+                          {kFontHorizonPixels, kFontVerticalPixels}, {0, 0, 0});
 
-        draw_area.pos = CalcCursorPos();
+            draw_area.pos = CalcCursorPos();
 
-        if (linebuf_index_ > 0) {
-            --linebuf_index_;
-        }
+            if (linebuf_index_ > 0) {
+                --linebuf_index_;
+            }
+        };
     } else if (ascii != 0 && cursor_pos_.x < kColumns - 1 &&
                linebuf_index_ < kLineMax - 1) {
         linebuf_[linebuf_index_] = ascii;
@@ -76,6 +82,57 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
     DrawCursor(true);
 
     return draw_area;
+}
+
+void Terminal::Print(const char* s) {
+    DrawCursor(false);
+
+    auto newline = [this]() {
+        cursor_pos_.x = 0;
+        if (cursor_pos_.y < kRows - 1) {
+            ++cursor_pos_.y;
+        } else {
+            Scroll1();
+        }
+    };
+
+    while (*s) {
+        if (*s == '\n') {
+            newline();
+        } else {
+            WriteAscii(*window_->Drawer(), CalcCursorPos(), *s,
+                       {255, 255, 255});
+            if (cursor_pos_.x == kColumns) {
+                newline();
+            } else {
+                ++cursor_pos_.x;
+            }
+        }
+
+        ++s;
+    }
+
+    DrawCursor(true);
+}
+
+void Terminal::ExecuteLine() {
+    char* command = &linebuf_[0];
+    char* first_arg = strchr(command, ' ');
+    if (first_arg) {
+        *first_arg = 0;
+        ++first_arg;
+    }
+
+    if (strcmp(command, "echo") == 0) {
+        if (first_arg) {
+            Print(first_arg);
+        }
+        Print("\n");
+    } else if (command[0] != 0) {
+        Print("unknown command: ");
+        Print(command);
+        Print("\n");
+    }
 }
 
 void Terminal::Scroll1() {

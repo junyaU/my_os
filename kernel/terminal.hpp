@@ -22,13 +22,16 @@ class Terminal {
     unsigned int layer_id_;
 
     Vector2D<int> cursor_pos_{0, 0};
-    bool cursor_visible_{true};
+    bool cursor_visible_{false};
     void DrawCursor(bool visible);
     Vector2D<int> CalcCursorPos() const;
 
     int linebuf_index_{0};
     std::array<char, kLineMax> linebuf_{};
     void Scroll1();
+
+    void ExecuteLine();
+    void Print(const char* s);
 };
 
 void TaskTerminal(uint64_t task_id, int64_t data);
