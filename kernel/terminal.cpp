@@ -27,7 +27,7 @@ Rectangle<int> Terminal::BlinkCursor() {
 
 void Terminal::DrawCursor(bool visible) {
     const auto color = visible ? ToColor(0xffffff) : ToColor(0);
-    FillRectangle(*window_->InnerDrawer(), CalcCursorPos(), {7, 15}, color);
+    FillRectangle(*window_->Drawer(), CalcCursorPos(), {7, 15}, color);
 }
 
 Vector2D<int> Terminal::CalcCursorPos() const {
@@ -128,6 +128,13 @@ void Terminal::ExecuteLine() {
             Print(first_arg);
         }
         Print("\n");
+    } else if (strcmp(command, "clear") == 0) {
+        FillRectangle(
+            *window_->InnerDrawer(), {4, 4},
+            {kFontHorizonPixels * kColumns, kFontVerticalPixels * kRows},
+            {0, 0, 0});
+
+        cursor_pos_.y = 0;
     } else if (command[0] != 0) {
         Print("unknown command: ");
         Print(command);
