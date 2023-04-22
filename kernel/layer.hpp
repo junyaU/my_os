@@ -37,6 +37,8 @@ class LayerManager {
 
     void Draw(const Rectangle<int>& area) const;
     void Draw(unsigned int id) const;
+    void Draw(unsigned int id, const Rectangle<int> area) const;
+
     void Move(unsigned int id, Vector2D<int> new_position);
     void MoveRelative(unsigned int id, Vector2D<int> pos_diff);
 
@@ -77,3 +79,17 @@ extern ActiveLayer* active_layer;
 void InitializeLayer();
 
 void ProcessLayerMessage(const Message& msg);
+
+constexpr Message MakeLayerMessage(uint64_t task_id, unsigned int layer_id,
+                                   LayerOperation op,
+                                   const Rectangle<int>& area) {
+    Message msg{Message::kLayer, task_id};
+    msg.arg.layer.layer_id = layer_id;
+    msg.arg.layer.op = op;
+    msg.arg.layer.x = area.pos.x;
+    msg.arg.layer.y = area.pos.y;
+    msg.arg.layer.w = area.size.x;
+    msg.arg.layer.h = area.size.y;
+
+    return msg;
+}

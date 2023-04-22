@@ -1,6 +1,6 @@
 #pragma once
 
-enum class LayerOperation { Move, MoveRelative, Draw };
+enum class LayerOperation { Move, MoveRelative, Draw, DrawArea };
 
 struct Message {
     enum Type {
@@ -29,6 +29,7 @@ struct Message {
             LayerOperation op;
             unsigned int layer_id;
             int x, y;
+            int w, h;
         } layer;
     } arg;
 };
