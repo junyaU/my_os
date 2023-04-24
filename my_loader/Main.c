@@ -196,6 +196,64 @@ void CopyLoadSegments(Elf64_Ehdr *ehdr)
     }
 }
 
+EFI_STATUS ReadFile(EFI_FILE_PROTOCOL *file, VOID **buffer)
+{
+    EFI_STATUS status;
+    UINTN file_info_size = sizeof(EFI_FILE_INFO) + sizeof(CHAR16) * 12;
+    UINT8 file_info_buffer[file_info_size];
+
+    status = file->GetInfo(file, &gEfiFileInfoGuid, &file_info_size,
+                           file_info_buffer);
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
+
+    EFI_FILE_INFO *file_info = (EFI_FILE_INFO *)file_info_buffer;
+    UINTN file_size = file_info->FileSize;
+
+    status = gBS->AllocatePool(EfiLoaderData, file_size, buffer);
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
+
+    return file->Read(file, &file_size, *buffer);
+}
+
+EFI_STATUS OpenBlockIoProtocolForLoadedImage(EFI_HANDLE image_handle,
+                                             EFI_BLOCK_IO_PROTOCOL **block_io)
+{
+    EFI_STATUS status;
+    EFI_LOADED_IMAGE_PROTOCOL *loaded_image;
+
+    status = gBS->OpenProtocol(image_handle, &gEfiLoadedImageProtocolGuid,
+                               (VOID **)&loaded_image, image_handle, NULL,
+                               EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
+
+    return gBS->OpenProtocol(
+        loaded_image->DeviceHandle, &gEfiBlockIoProtocolGuid, (VOID **)block_io,
+        image_handle, NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+}
+
+EFI_STATUS ReadBlocks(EFI_BLOCK_IO_PROTOCOL *block_io, UINT32 media_id,
+                      UINTN read_bytes, VOID **buffer)
+{
+    EFI_STATUS status;
+
+    status = gBS->AllocatePool(EfiLoaderData, read_bytes, buffer);
+    if (EFI_ERROR(status))
+    {
+        return status;
+    }
+
+    return block_io->ReadBlocks(block_io, media_id, 0, read_bytes, *buffer);
+}
+
 EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
                            EFI_SYSTEM_TABLE *system_table)
 {
@@ -244,31 +302,10 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
         Halt();
     }
 
-    UINTN file_info_size = sizeof(EFI_FILE_INFO) + sizeof(CHAR16) * 12;
-    UINT8 file_info_buffer[file_info_size];
-
-    if (EFI_ERROR(kernel_file->GetInfo(kernel_file, &gEfiFileInfoGuid,
-                                       &file_info_size, file_info_buffer)))
-    {
-        Print(L"failed to get file information\n");
-        Halt();
-    }
-
-    EFI_FILE_INFO *file_info = (EFI_FILE_INFO *)file_info_buffer;
-    UINTN kernel_file_size = file_info->FileSize;
-
     VOID *kernel_buffer;
-    if (EFI_ERROR(gBS->AllocatePool(EfiLoaderData, kernel_file_size,
-                                    &kernel_buffer)))
+    if (EFI_ERROR(ReadFile(kernel_file, &kernel_buffer)))
     {
         Print(L"failed to allocate pool\n");
-        Halt();
-    }
-
-    if (EFI_ERROR(
-            kernel_file->Read(kernel_file, &kernel_file_size, kernel_buffer)))
-    {
-        Print(L"error\n");
         Halt();
     }
 
@@ -294,6 +331,48 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
     {
         Print(L"failed to free pool\n");
         Halt();
+    }
+
+    VOID *volume_image;
+
+    EFI_FILE_PROTOCOL *volume_file;
+
+    if ((root_dir->Open(root_dir, &volume_file, L"\\fat_disk",
+                        EFI_FILE_MODE_READ, 0)) == EFI_SUCCESS)
+    {
+        if (EFI_ERROR(ReadFile(volume_file, &volume_image)))
+        {
+            Print(L"failed to read file\n");
+            Halt();
+        }
+    }
+    else
+    {
+        EFI_BLOCK_IO_PROTOCOL *block_io;
+        if (EFI_ERROR(
+                OpenBlockIoProtocolForLoadedImage(image_handle, &block_io)))
+        {
+            Print(L"failed to open Block I/O Protocol\n");
+            Halt();
+        }
+
+        EFI_BLOCK_IO_MEDIA *media = block_io->Media;
+        UINTN volume_bytes = (UINTN)media->BlockSize * (media->LastBlock + 1);
+        if (volume_bytes > 16 * 1024 * 1024)
+        {
+            volume_bytes = 16 * 1024 * 1024;
+        }
+
+        Print(L"Reading %lu bytes (Present %d, BlockSize %u, LastBlock %u)\n",
+              volume_bytes, media->MediaPresent, media->BlockSize,
+              media->LastBlock);
+
+        if (EFI_ERROR(ReadBlocks(block_io, media->MediaId, volume_bytes,
+                                 &volume_image)))
+        {
+            Print(L"failed to read blocks\n");
+            Halt();
+        }
     }
 
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
@@ -354,9 +433,11 @@ EFI_STATUS EFIAPI UefiMain(EFI_HANDLE image_handle,
         *(UINT64 *)(kernel_first_addrress + entry_offset);
 
     // 引数にメモリマップを渡してカーネルを実行
-    typedef void __attribute__((sysv_abi)) KernelEntryPoint(
-        const struct FrameBufferConfig *, const struct MemoryMap *, const VOID *);
-    ((KernelEntryPoint *)kernel_entry_address)(&config, &memory_map, acpi_table);
+    typedef void __attribute__((sysv_abi))
+    KernelEntryPoint(const struct FrameBufferConfig *, const struct MemoryMap *,
+                     const VOID *, VOID *);
+    ((KernelEntryPoint *)kernel_entry_address)(&config, &memory_map, acpi_table,
+                                               volume_image);
 
     Print(L"All done\n");
     while (1)
