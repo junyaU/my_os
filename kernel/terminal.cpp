@@ -1,10 +1,46 @@
 #include "terminal.hpp"
 
+#include <cstring>
+
 #include "console.hpp"
+#include "elf.hpp"
 #include "fat.hpp"
 #include "font.hpp"
 #include "layer.hpp"
 #include "pci.hpp"
+
+namespace {
+std::vector<char*> MakeArgVector(char* command, char* first_arg) {
+    std::vector<char*> argv;
+    argv.push_back(command);
+
+    char* p = first_arg;
+    while (true) {
+        while (isspace(p[0])) {
+            p++;
+        }
+
+        if (p[0] == 0) {
+            break;
+        }
+
+        argv.push_back(p);
+
+        while (p[0] != 0 && !isspace(p[0])) {
+            p++;
+        }
+
+        if (p[0] == 0) {
+            break;
+        }
+
+        p[0] = 0;
+        p++;
+    }
+
+    return argv;
+}  // namespace
+}  // namespace
 
 Terminal::Terminal() {
     window_ = std::make_shared<ToplevelWindow>(
@@ -98,7 +134,8 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
     return draw_area;
 }
 
-void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry) {
+void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry, char* command,
+                           char* first_arg) {
     auto cluster = file_entry.FirstCluster();
     auto remain_bytes = file_entry.file_size;
 
@@ -116,9 +153,29 @@ void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry) {
         cluster = fat::NextCluster(cluster);
     }
 
-    using Func = void();
-    auto f = reinterpret_cast<Func*>(&file_buf[0]);
-    f();
+    auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
+    if (memcmp(elf_header->e_ident,
+               "\x7f"
+               "ELF",
+               4) != 0) {
+        using Func = void();
+        auto f = reinterpret_cast<Func*>(&file_buf[0]);
+        f();
+        return;
+    }
+
+    auto argv = MakeArgVector(command, first_arg);
+    auto entry_addr = elf_header->e_entry;
+    entry_addr += reinterpret_cast<uintptr_t>(&file_buf[0]);
+
+    using Func = int(int, char**);
+    auto f = reinterpret_cast<Func*>(entry_addr);
+
+    auto ret = f(argv.size(), &argv[0]);
+
+    char s[64];
+    sprintf(s, "app exited. ret = %d\n", ret);
+    Print(s);
 }
 
 void Terminal::Print(char c) {
@@ -249,7 +306,7 @@ void Terminal::ExecuteLine() {
     } else if (command[0] != 0) {
         auto file_entry = fat::FindFile(command);
         if (file_entry) {
-            ExecuteFile(*file_entry);
+            ExecuteFile(*file_entry, command, first_arg);
             return;
         }
 
