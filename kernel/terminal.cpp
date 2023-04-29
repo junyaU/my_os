@@ -98,9 +98,7 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
     return draw_area;
 }
 
-void Terminal::Print(const char* s) {
-    DrawCursor(false);
-
+void Terminal::Print(char c) {
     auto newline = [this]() {
         cursor_pos_.x = 0;
         if (cursor_pos_.y < kRows - 1) {
@@ -110,19 +108,23 @@ void Terminal::Print(const char* s) {
         }
     };
 
-    while (*s) {
-        if (*s == '\n') {
+    if (c == '\n') {
+        newline();
+    } else {
+        WriteAscii(*window_->Drawer(), CalcCursorPos(), c, {255, 255, 255});
+        if (cursor_pos_.x == kColumns) {
             newline();
         } else {
-            WriteAscii(*window_->Drawer(), CalcCursorPos(), *s,
-                       {255, 255, 255});
-            if (cursor_pos_.x == kColumns) {
-                newline();
-            } else {
-                ++cursor_pos_.x;
-            }
+            ++cursor_pos_.x;
         }
+    }
+}
 
+void Terminal::Print(const char* s) {
+    DrawCursor(false);
+
+    while (*s) {
+        Print(*s);
         ++s;
     }
 
@@ -192,6 +194,35 @@ void Terminal::ExecuteLine() {
 
             Print(s);
         }
+    } else if (strcmp(command, "cat") == 0) {
+        char s[64];
+
+        auto file_entry = fat::FindFile(first_arg);
+        if (!file_entry) {
+            sprintf(s, "no such file: %s\n", first_arg);
+            Print(s);
+            return;
+        }
+
+        auto cluster = file_entry->FirstCluster();
+        auto remain_bytes = file_entry->file_size;
+
+        DrawCursor(false);
+
+        while (cluster != 0 && cluster != fat::kEndOfClusterchain) {
+            char* p = fat::GetSectorByCluster<char>(cluster);
+
+            int i = 0;
+            for (; i < fat::bytes_per_cluster && i < remain_bytes; ++i) {
+                Print(*p);
+                p++;
+            }
+
+            remain_bytes -= i;
+            cluster = fat::NextCluster(cluster);
+        }
+
+        DrawCursor(true);
     } else if (command[0] != 0) {
         Print("unknown command: ");
         Print(command);
