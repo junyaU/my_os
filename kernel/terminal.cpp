@@ -98,6 +98,29 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
     return draw_area;
 }
 
+void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry) {
+    auto cluster = file_entry.FirstCluster();
+    auto remain_bytes = file_entry.file_size;
+
+    std::vector<uint8_t> file_buf(remain_bytes);
+    auto p = &file_buf[0];
+
+    while (cluster != 0 && cluster != fat::kEndOfClusterchain) {
+        const auto copy_bytes = fat::bytes_per_cluster < remain_bytes
+                                    ? fat::bytes_per_cluster
+                                    : remain_bytes;
+        memcpy(p, fat::GetSectorByCluster<uint8_t>(cluster), copy_bytes);
+
+        remain_bytes -= copy_bytes;
+        p += copy_bytes;
+        cluster = fat::NextCluster(cluster);
+    }
+
+    using Func = void();
+    auto f = reinterpret_cast<Func*>(&file_buf[0]);
+    f();
+}
+
 void Terminal::Print(char c) {
     auto newline = [this]() {
         cursor_pos_.x = 0;
@@ -224,6 +247,12 @@ void Terminal::ExecuteLine() {
 
         DrawCursor(true);
     } else if (command[0] != 0) {
+        auto file_entry = fat::FindFile(command);
+        if (file_entry) {
+            ExecuteFile(*file_entry);
+            return;
+        }
+
         Print("unknown command: ");
         Print(command);
         Print("\n");
@@ -290,6 +319,7 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
             __asm__("sti");
             continue;
         }
+        __asm__("sti");
 
         switch (msg->type) {
             case Message::kTimerTimeout: {

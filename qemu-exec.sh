@@ -30,6 +30,14 @@ mkdir -p mnt/EFI/BOOT
 cp ~/edk2/Build/my_loaderX64/DEBUG_CLANGPDB/X64/Loader.efi ~/mnt/EFI/BOOT
 mv ~/mnt/EFI/BOOT/Loader.efi ~/mnt/EFI/BOOT/BOOTX64.EFI
 
+# アプリケーション配置
+for APP in $(ls ~/my_os/apps); do
+    echo "copy $APP"
+    if [ -f ~/my_os/apps/$APP/$APP ]; then
+        cp ~/my_os/apps/$APP/$APP ~/mnt/
+    fi
+done
+
 # カーネル配置
 cp ~/my_os/kernel/kernel.elf mnt
 hdiutil detach mnt
