@@ -12,3 +12,5 @@ $(TARGET): $(TARGET).o Makefile
 
 %.o: %.cpp Makefile
 	clang++ $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+

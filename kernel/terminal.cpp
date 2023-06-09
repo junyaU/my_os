@@ -45,11 +45,13 @@ std::vector<char*> MakeArgVector(char* command, char* first_arg) {
 }
 
 Elf64_Phdr* GetProgramHeader(Elf64_Ehdr* ehdr) {
-    return reinterpret_cast<Elf64_Phdr*>(ehdr->e_phoff);
+    return reinterpret_cast<Elf64_Phdr*>(reinterpret_cast<uintptr_t>(ehdr) +
+                                         ehdr->e_phoff);
 }
 
 uintptr_t GetFirstLoadAddress(Elf64_Ehdr* ehdr) {
     auto phdr = GetProgramHeader(ehdr);
+
     for (int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type != PT_LOAD) {
             continue;
@@ -202,6 +204,13 @@ Error CleanPageMaps(LinearAddress4Level addr) {
     auto pml4_table = reinterpret_cast<PageMapEntry*>(GetCR3());
     auto pdp_table = pml4_table[addr.parts.pml4].Pointer();
     pml4_table[addr.parts.pml4].data = 0;
+    if (auto err = CleanPageMap(pdp_table, 3)) {
+        return err;
+    }
+
+    const auto pdp_addr = reinterpret_cast<uintptr_t>(pdp_table);
+    const FrameID pdp_frame{pdp_addr / kBytesPerFrame};
+    return memory_manager->Free(pdp_frame, 1);
 }
 
 }  // namespace
@@ -298,24 +307,10 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
     return draw_area;
 }
 
-void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry, char* command,
-                           char* first_arg) {
-    auto cluster = file_entry.FirstCluster();
-    auto remain_bytes = file_entry.file_size;
-
-    std::vector<uint8_t> file_buf(remain_bytes);
-    auto p = &file_buf[0];
-
-    while (cluster != 0 && cluster != fat::kEndOfClusterchain) {
-        const auto copy_bytes = fat::bytes_per_cluster < remain_bytes
-                                    ? fat::bytes_per_cluster
-                                    : remain_bytes;
-        memcpy(p, fat::GetSectorByCluster<uint8_t>(cluster), copy_bytes);
-
-        remain_bytes -= copy_bytes;
-        p += copy_bytes;
-        cluster = fat::NextCluster(cluster);
-    }
+Error Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry,
+                            char* command, char* first_arg) {
+    std::vector<uint8_t> file_buf(file_entry.file_size);
+    fat::LoadFile(&file_buf[0], file_buf.size(), file_entry);
 
     auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
     if (memcmp(elf_header->e_ident,
@@ -325,13 +320,15 @@ void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry, char* command,
         using Func = void();
         auto f = reinterpret_cast<Func*>(&file_buf[0]);
         f();
-        return;
+        return MAKE_ERROR(Error::kSuccess);
     }
 
     auto argv = MakeArgVector(command, first_arg);
-    auto entry_addr = elf_header->e_entry;
-    entry_addr += reinterpret_cast<uintptr_t>(&file_buf[0]);
+    if (auto err = (LoadELF(elf_header))) {
+        return err;
+    }
 
+    auto entry_addr = elf_header->e_entry;
     using Func = int(int, char**);
     auto f = reinterpret_cast<Func*>(entry_addr);
 
@@ -340,6 +337,13 @@ void Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry, char* command,
     char s[64];
     sprintf(s, "app exited. ret = %d\n", ret);
     Print(s);
+
+    const auto addr_first = GetFirstLoadAddress(elf_header);
+    if (auto err = CleanPageMaps(LinearAddress4Level{addr_first})) {
+        return err;
+    }
+
+    return MAKE_ERROR(Error::kSuccess);
 }
 
 void Terminal::Print(char c) {
@@ -470,7 +474,12 @@ void Terminal::ExecuteLine() {
     } else if (command[0] != 0) {
         auto file_entry = fat::FindFile(command);
         if (file_entry) {
-            ExecuteFile(*file_entry, command, first_arg);
+            if (auto err = ExecuteFile(*file_entry, command, first_arg)) {
+                Print("failed to exec file: ");
+                Print(err.Name());
+                Print("\n");
+            }
+
             return;
         }
 
