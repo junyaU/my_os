@@ -168,6 +168,16 @@ SwitchContext:
 
     o64 iret
 
+global CallApp
+CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+    push rbp
+    push rbp, rsp
+    push rcx ; SS
+    push r9  ; RSP
+    push rdx ; CS
+    push r8  ; RIP
+    o64 retf
+
 
 
 
