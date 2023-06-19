@@ -94,9 +94,9 @@ WithError<PageMapEntry*> NewPageMap() {
         return {nullptr, frame.error};
     }
 
-    auto entry = reinterpret_cast<PageMapEntry*>(frame.value.Frame());
-    memset(entry, 0, sizeof(uint64_t) * 512);
-    return {entry, MAKE_ERROR(Error::kSuccess)};
+    auto e = reinterpret_cast<PageMapEntry*>(frame.value.Frame());
+    memset(e, 0, sizeof(uint64_t) * 512);
+    return {e, MAKE_ERROR(Error::kSuccess)};
 }
 
 WithError<PageMapEntry*> SetNewPageMapIfNotPresent(PageMapEntry& entry) {
@@ -130,14 +130,13 @@ WithError<size_t> SetupPageMap(PageMapEntry* page_map, int page_map_level,
         page_map[entry_index].bits.user = 1;
 
         if (page_map_level == 1) {
-            num_4kpages--;
+            --num_4kpages;
         } else {
             auto [num_remain_pages, err] =
                 SetupPageMap(child_map, page_map_level - 1, addr, num_4kpages);
             if (err) {
                 return {num_4kpages, err};
             }
-
             num_4kpages = num_remain_pages;
         }
 
@@ -146,7 +145,7 @@ WithError<size_t> SetupPageMap(PageMapEntry* page_map, int page_map_level,
         }
 
         addr.SetPart(page_map_level, entry_index + 1);
-        for (int level = page_map_level - 1; level >= 1; level--) {
+        for (int level = page_map_level - 1; level >= 1; --level) {
             addr.SetPart(level, 0);
         }
     }
@@ -337,6 +336,7 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode,
 Error Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry,
                             char* command, char* first_arg) {
     std::vector<uint8_t> file_buf(file_entry.file_size);
+
     fat::LoadFile(&file_buf[0], file_buf.size(), file_entry);
 
     auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
@@ -350,7 +350,6 @@ Error Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry,
         return MAKE_ERROR(Error::kSuccess);
     }
 
-    // auto argv = MakeArgVector(command, first_arg);
     if (auto err = (LoadELF(elf_header))) {
         return err;
     }
