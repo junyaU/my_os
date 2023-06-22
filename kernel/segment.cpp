@@ -1,10 +1,15 @@
 #include "segment.hpp"
 
 #include "asmfunc.h"
+#include "console.hpp"
+#include "memory_manager.hpp"
 
 namespace {
-std::array<SegmentDescriptor, 5> gdt;
-}
+std::array<SegmentDescriptor, 7> gdt;
+std::array<uint32_t, 26> tss;
+
+static_assert((kTSS >> 3) + 1 < gdt.size());
+}  // namespace
 
 void SetCodeSegment(SegmentDescriptor& descriptor, DescriptorType type,
                     unsigned int privilege_level, uint32_t base,
@@ -33,6 +38,14 @@ void SetDataSegment(SegmentDescriptor& descriptor, DescriptorType type,
     descriptor.bits.default_operation_size = 1;
 }
 
+void SetSystemSegment(SegmentDescriptor& desc, DescriptorType type,
+                      unsigned int privilege_level, uint32_t base,
+                      uint32_t limit) {
+    SetCodeSegment(desc, type, privilege_level, base, limit);
+    desc.bits.system_segment = 0;
+    desc.bits.long_mode = 0;
+}
+
 // GDT再構築
 void SetupSegments() {
     gdt[0].data = 0;
@@ -48,4 +61,25 @@ void InitializeSegmentation() {
     SetupSegments();
     SetDSAll(kKernelDS);
     SetCSSS(kKernelCS, kKernelSS);
+}
+
+void InitializeTSS() {
+    const int kRSP0Frames = 8;
+    auto [stack, err] = memory_manager->Allocate(kRSP0Frames);
+    if (err) {
+        printk("failed to allocate rsp0: %s\n", err.Name());
+        exit(1);
+    }
+
+    uint64_t rsp0 =
+        reinterpret_cast<uint64_t>(stack.Frame() + kRSP0Frames * 4096);
+    tss[1] = rsp0 & 0xffffffffu;
+    tss[2] = rsp0 >> 32;
+
+    uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss[0]);
+    SetSystemSegment(gdt[kTSS >> 3], DescriptorType::kTSSAvailable, 0, tss_addr,
+                     sizeof(tss) - 1);
+    gdt[(kTSS >> 3) + 1].data = tss_addr >> 32;
+
+    LoadTR(kTSS);
 }
