@@ -168,6 +168,42 @@ SwitchContext:
 
     o64 iret
 
+global RestoreContext
+RestoreContext: ; void RestoreContext(void* task_context);
+    push qword [rdi + 0x28] ; SS
+    push qword [rdi + 0x70] ; RSP
+    push qword [rdi + 0x10] ; RFLAGS
+    push qword [rdi + 0x20] ; CS
+    push qword [rdi + 0x08] ; RIP
+
+    fixstore [rdi + 0xc0]
+    mov rax , [rdi + 0x00]
+    mov cr3, rax
+    mov rax, [rdi + 0x30]
+    mov fs, ax
+    mov rax, [rdi + 0x38]
+    mov gs, ax
+
+    mov rax, [rdi + 0x40]
+    mov rbx, [rdi + 0x48]
+    mov rcx, [rdi + 0x50]
+    mov rdx, [rdi + 0x58]
+    mov rsi, [rdi + 0x68]
+    mov rbp, [rdi + 0x78]
+    mov r8,  [rdi + 0x80]
+    mov r9,  [rdi + 0x88]
+    mov r10, [rdi + 0x90]
+    mov r11, [rdi + 0x98]
+    mov r12, [rdi + 0xa0]
+    mov r13, [rdi + 0xa8]
+    mov r14, [rdi + 0xb0]
+    mov r15, [rdi + 0xb8]
+
+    mov rdi, [rdi + 0x60]
+
+    o64 iret
+
+
 global CallApp
 CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
     push rbp
@@ -177,6 +213,51 @@ CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_
     push rdx ; CS
     push r8  ; RIP
     o64 retf
+
+extern LAPICTimerOnInterrupt
+; void LAPICTimerOnInterrupt(const TaskContext* ctx);
+
+global IntHandlerLAPICTimer
+IntHandlerLAPICTimer:
+    push rbp
+    mov rbp, rsp
+
+    sub rsp, 512
+    fixsave [rsp]
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push qword [rbp] ; RBP
+    push qword [rbp + 0x20] ; RSP
+    push rsi
+    push rdi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+
+    mov ax, fs
+    mov bx, gs
+    mov rcx, cr3
+
+    push rbx
+    push rax
+    push qword [rbp + 0x28] ; SS
+    push qword [rbp +0x10]  ; CS
+    push rbp                ; reserved1
+    push qword [rbp + 0x18] ; RFLAGS
+    push qword [rbp + 0x08] ; RIP
+    push rcx                ; CR3
+
+    mov rdi, rsp
+    call LAPICTimerOnInterrupt
+
+
 
 global LoadTR
 LoadTR:
