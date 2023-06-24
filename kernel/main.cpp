@@ -24,6 +24,7 @@
 #include "paging.hpp"
 #include "pci.hpp"
 #include "segment.hpp"
+#include "syscall.hpp"
 #include "task.hpp"
 #include "terminal.hpp"
 #include "timer.hpp"
@@ -152,6 +153,8 @@ extern "C" void KernelMainNewStack(
     timer_manager->AddTimer(Timer{kTimer05Sec, kTextboxCursorTimer});
     __asm__("sti");
     bool textbox_cursor_visible = false;
+
+    InitializeSysCall();
 
     InitializeTask();
     Task &main_task = task_manager->CurrentTask();

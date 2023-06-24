@@ -32,4 +32,8 @@ void CallApp(int argc, char **argv, uint16_t cs, uint16_t ss, uint64_t rip,
 void IntHandlerLAPICTimer();
 
 void LoadTR(uint16_t tr);
+
+void WriteMSR(uint32_t msr, uint64_t value);
+
+void SyscallEntry(void);
 }

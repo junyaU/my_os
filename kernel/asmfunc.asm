@@ -257,7 +257,7 @@ IntHandlerLAPICTimer:
     mov rdi, rsp
     call LAPICTimerOnInterrupt
 
-    add rps, 8*8
+    add rsp, 8*8
     pop rax
     pop rbx
     pop rcx
@@ -283,5 +283,38 @@ global LoadTR
 LoadTR:
     ltr di
     ret
+
+global WriteMSR
+WriteMSR: ; void WriteMSR(uint32_t msr, uint64_t value);
+    mov rdx, rsi
+    shr rdx, 32
+    mov eax, esi 
+    mov ecx, edi
+    wrmsr
+    ret  
+
+extern syscall_table
+
+; システムコールされたときに呼ばれる
+global SyscallEntry
+SyscallEntry: ; void SyscallEntry(void);
+    push rbp
+    push rcx ; もとのRIP
+    push r11 ; もとのRFLAGS
+
+    mov rcx, r10
+    and eax, 0xfffffff
+    mov rbp, rsp
+    and rsp, 0xfffffffffffffff0
+
+    call [syscall_table + 8 * eax]
+
+    mov rsp, rbp
+
+    pop r11
+    pop rcx
+    pop rbp
+    o64 sysret
+
 
 
