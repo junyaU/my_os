@@ -176,7 +176,7 @@ RestoreContext: ; void RestoreContext(void* task_context);
     push qword [rdi + 0x20] ; CS
     push qword [rdi + 0x08] ; RIP
 
-    fixstore [rdi + 0xc0]
+    fxrstor [rdi + 0xc0]
     mov rax , [rdi + 0x00]
     mov cr3, rax
     mov rax, [rdi + 0x30]
@@ -223,7 +223,7 @@ IntHandlerLAPICTimer:
     mov rbp, rsp
 
     sub rsp, 512
-    fixsave [rsp]
+    fxsave [rsp]
     push r15
     push r14
     push r13
@@ -257,7 +257,27 @@ IntHandlerLAPICTimer:
     mov rdi, rsp
     call LAPICTimerOnInterrupt
 
+    add rps, 8*8
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rdi
+    pop rsi
+    add rsp, 16
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+    fxrstor [rsp]
 
+    mov rsp, rbp
+    pop rbp
+    iretq
 
 global LoadTR
 LoadTR:

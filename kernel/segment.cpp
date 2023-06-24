@@ -72,7 +72,7 @@ void InitializeTSS() {
     }
 
     uint64_t rsp0 =
-        reinterpret_cast<uint64_t>(stack.Frame() + kRSP0Frames * 4096);
+        reinterpret_cast<uint64_t>(stack.Frame()) + kRSP0Frames * 4096;
     tss[1] = rsp0 & 0xffffffffu;
     tss[2] = rsp0 >> 32;
 
