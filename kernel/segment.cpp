@@ -2,6 +2,7 @@
 
 #include "asmfunc.h"
 #include "console.hpp"
+#include "interrupt.hpp"
 #include "memory_manager.hpp"
 
 namespace {
@@ -9,6 +10,21 @@ std::array<SegmentDescriptor, 7> gdt;
 std::array<uint32_t, 26> tss;
 
 static_assert((kTSS >> 3) + 1 < gdt.size());
+
+void SetTSS(int index, uint64_t value) {
+    tss[index] = value & 0xffffffffu;
+    tss[index + 1] = value >> 32;
+}
+
+uint64_t AllocateStackArea(int num_4kframes) {
+    auto [stack, err] = memory_manager->Allocate(num_4kframes);
+    if (err) {
+        printk("failed to allocate stack area: %s\n", err.Name());
+        exit(1);
+    }
+
+    return reinterpret_cast<uint64_t>(stack.Frame()) + num_4kframes * 4096;
+}
 }  // namespace
 
 void SetCodeSegment(SegmentDescriptor& descriptor, DescriptorType type,
@@ -64,17 +80,8 @@ void InitializeSegmentation() {
 }
 
 void InitializeTSS() {
-    const int kRSP0Frames = 8;
-    auto [stack, err] = memory_manager->Allocate(kRSP0Frames);
-    if (err) {
-        printk("failed to allocate rsp0: %s\n", err.Name());
-        exit(1);
-    }
-
-    uint64_t rsp0 =
-        reinterpret_cast<uint64_t>(stack.Frame()) + kRSP0Frames * 4096;
-    tss[1] = rsp0 & 0xffffffffu;
-    tss[2] = rsp0 >> 32;
+    SetTSS(1, AllocateStackArea(8));
+    SetTSS(7 + 2 * kISTForTimer, AllocateStackArea(8));
 
     uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss[0]);
     SetSystemSegment(gdt[kTSS >> 3], DescriptorType::kTSSAvailable, 0, tss_addr,
