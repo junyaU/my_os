@@ -1,3 +1,5 @@
+#include <cstdlib>
+
 #include "../syscall.h"
 
 extern "C" void main() {
@@ -10,5 +12,5 @@ extern "C" void main() {
     SyscallWinWriteString(layer_id, 24, 40, 0x00c000, "hikakin");
     SyscallWinWriteString(layer_id, 40, 56, 0x0000c0, "seikin");
 
-    SyscallExit(0);
+    exit(0);
 }

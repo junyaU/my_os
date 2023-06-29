@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "syscall.h"
+
 int close(int fd) {
     errno = EBADF;
     return -1;
@@ -33,15 +35,8 @@ caddr_t sbrk(int incr) {
     return (caddr_t)-1;
 }
 
-struct SyscallResult {
-    int error;
-    uint64_t value;
-};
-
-struct SyscallResult SyscallPutString(uint64_t, uint64_t, uint64_t);
-
 ssize_t write(int fd, const void* buf, size_t count) {
-    struct SyscallResult res = SyscallPutString(fd, (uint64_t)buf, count);
+    struct SyscallResult res = SyscallPutString(fd, buf, count);
     if (res.error == 0) {
         return res.value;
     }
@@ -49,3 +44,5 @@ ssize_t write(int fd, const void* buf, size_t count) {
     errno = res.error;
     return -1;
 }
+
+void _exit(int status) { SyscallExit(status); }
