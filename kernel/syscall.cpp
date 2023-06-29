@@ -6,6 +6,7 @@
 
 #include "asmfunc.h"
 #include "console.hpp"
+#include "font.hpp"
 #include "msr.hpp"
 #include "task.hpp"
 #include "terminal.hpp"
@@ -76,17 +77,38 @@ SYSCALL(OpenWindow) {
     return {layer_id, 0};
 }
 
+SYSCALL(WinWriteString) {
+    const unsigned int layer_id = arg1;
+    const int x = arg2, y = arg3;
+    const uint32_t color = arg4;
+    const auto s = reinterpret_cast<const char *>(arg5);
+
+    __asm__("cli");
+    auto layer = layer_manager->FindLayer(layer_id);
+    __asm__("sti");
+
+    if (layer == nullptr) {
+        return {0, EBADF};
+    }
+
+    WriteString(*layer->GetWindow()->Drawer(), {x, y}, s, ToColor(color));
+
+    __asm__("cli");
+    layer_manager->Draw(layer_id);
+    __asm__("sti");
+
+    return {0, 0};
+}
+
 #undef SYSCALL
 }  // namespace syscall
 
 using SyscallFuncType = syscall::Result(uint64_t, uint64_t, uint64_t, uint64_t,
                                         uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType *, 4> syscall_table{
-    syscall::LogString,
-    syscall::PutString,
-    syscall::Exit,
-    syscall::OpenWindow,
+extern "C" std::array<SyscallFuncType *, 5> syscall_table{
+    syscall::LogString,  syscall::PutString,      syscall::Exit,
+    syscall::OpenWindow, syscall::WinWriteString,
 };
 
 void InitializeSysCall() {
