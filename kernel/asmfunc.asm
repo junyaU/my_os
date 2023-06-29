@@ -206,12 +206,20 @@ RestoreContext: ; void RestoreContext(void* task_context);
 
 global CallApp
 CallApp: ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+    push rbx
     push rbp
-    mov rbp, rsp
-    push rcx ; SS
-    push r9  ; RSP
+    push r12
+    push r13
+    push r14
+    push r15
+    mov [r9], rsp
+
+
+    push rdx ; SS
+    push r8  ; RSP
+    add rdx, 8
     push rdx ; CS
-    push r8  ; RIP
+    push rcx  ; RIP
     o64 retf
 
 extern LAPICTimerOnInterrupt
@@ -302,6 +310,8 @@ SyscallEntry: ; void SyscallEntry(void);
     push rcx ; もとのRIP
     push r11 ; もとのRFLAGS
 
+    push rax ; syscall番号
+
     mov rcx, r10
     and eax, 0xfffffff
     mov rbp, rsp
@@ -311,10 +321,25 @@ SyscallEntry: ; void SyscallEntry(void);
 
     mov rsp, rbp
 
+    pop rsi ; syscall番号を戻す
+    cmp esi, 0x80000002
+    je .exit
+
     pop r11
     pop rcx
     pop rbp
     o64 sysret
 
 
+.exit:
+    mov rsp, rax
+    mov eax, edx
 
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+
+    ret
