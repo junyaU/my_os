@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "../syscall.h"
+
 int stack_ptr;
 long stack[100];
 
@@ -16,8 +18,6 @@ void Push(long value) {
     ++stack_ptr;
     stack[stack_ptr] = value;
 }
-
-extern "C" int64_t SyscallExit(int exit_code);
 
 extern "C" void main(int argc, char **argv) {
     stack_ptr = -1;
