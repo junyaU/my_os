@@ -1,36 +1,65 @@
 #include "syscall.hpp"
 
 #include <array>
+#include <cerrno>
 #include <cstdint>
 
 #include "asmfunc.h"
 #include "console.hpp"
 #include "msr.hpp"
+#include "task.hpp"
+#include "terminal.hpp"
 
 namespace syscall {
-#define SYSCALL(name)                                                        \
-    int64_t name(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, \
-                 uint64_t arg5, uint64_t arg6)
+struct Result {
+    uint64_t value;
+    int error;
+};
+
+#define SYSCALL(name)                                                       \
+    Result name(uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, \
+                uint64_t arg5, uint64_t arg6)
 
 SYSCALL(LogString) {
     const char *s = reinterpret_cast<const char *>(arg1);
-    if (strlen(s) > 1024) {
-        return -1;
+
+    const auto len = strlen(s);
+    if (len > 1024) {
+        return {0, E2BIG};
     }
 
     printk("%s", s);
 
-    return 0;
+    return {len, 0};
+}
+
+SYSCALL(PutString) {
+    const auto fd = arg1;
+    const char *s = reinterpret_cast<const char *>(arg2);
+    const auto len = arg3;
+
+    if (len > 1024) {
+        return {0, E2BIG};
+    }
+
+    if (fd == 1) {
+        const auto task_id = task_manager->CurrentTask().ID();
+        (*terminals)[task_id]->Print(s, len);
+        return {len, 0};
+    }
+
+    return {0, EBADF};
 }
 
 #undef SYSCALL
 }  // namespace syscall
 
-using SyscallFuncType = int64_t(uint64_t, uint64_t, uint64_t, uint64_t,
-                                uint64_t, uint64_t);
+using SyscallFuncType = syscall::Result(uint64_t, uint64_t, uint64_t, uint64_t,
+                                        uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType *, 1> syscall_table{
+extern "C" std::array<SyscallFuncType *, 2> syscall_table{
     syscall::LogString,
+    syscall::PutString,
 };
 
 void InitializeSysCall() {
