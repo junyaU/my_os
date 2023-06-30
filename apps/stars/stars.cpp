@@ -19,6 +19,8 @@ extern "C" void main(int argc, char** argv) {
         num_stars = atoi(argv[1]);
     }
 
+    auto [tick, freq] = SyscallGetCurrentTick();
+
     std::default_random_engine engine;
     std::uniform_int_distribution x_dist(0, kWidth - 2), y_dist(0, kHeight - 2);
 
@@ -26,6 +28,10 @@ extern "C" void main(int argc, char** argv) {
         const int x = x_dist(engine), y = y_dist(engine);
         SyscallWinFillRectangle(layer_id, 4 + x, 24 + y, 2, 2, 0xffffff);
     }
+
+    auto tick_end = SyscallGetCurrentTick();
+    printf("%d stars in %lu ms.\n", num_stars,
+           (tick_end.value - tick) * 1000 / freq);
 
     exit(0);
 }
