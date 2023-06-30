@@ -77,12 +77,9 @@ SYSCALL(OpenWindow) {
     return {layer_id, 0};
 }
 
-SYSCALL(WinWriteString) {
-    const unsigned int layer_id = arg1;
-    const int x = arg2, y = arg3;
-    const uint32_t color = arg4;
-    const auto s = reinterpret_cast<const char *>(arg5);
-
+namespace {
+template <class Func, class... Args>
+Result DoWindowFunc(Func f, unsigned int layer_id, Args... args) {
     __asm__("cli");
     auto layer = layer_manager->FindLayer(layer_id);
     __asm__("sti");
@@ -91,13 +88,35 @@ SYSCALL(WinWriteString) {
         return {0, EBADF};
     }
 
-    WriteString(*layer->GetWindow()->Drawer(), {x, y}, s, ToColor(color));
+    const auto res = f(*layer->GetWindow(), args...);
+    if (res.error) {
+        return res;
+    }
 
     __asm__("cli");
     layer_manager->Draw(layer_id);
     __asm__("sti");
 
-    return {0, 0};
+    return res;
+}
+}  // namespace
+
+SYSCALL(WinWriteString) {
+    return DoWindowFunc(
+        [](Window &window, int x, int y, uint32_t color, const char *s) {
+            WriteString(*window.Drawer(), {x, y}, s, ToColor(color));
+            return Result{0, 0};
+        },
+        arg1, arg2, arg3, arg4, reinterpret_cast<const char *>(arg5));
+}
+
+SYSCALL(WinFillRectangle) {
+    return DoWindowFunc(
+        [](Window &window, int x, int y, int w, int h, uint32_t color) {
+            FillRectangle(*window.Drawer(), {x, y}, {w, h}, ToColor(color));
+            return Result{0, 0};
+        },
+        arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 #undef SYSCALL
@@ -106,9 +125,9 @@ SYSCALL(WinWriteString) {
 using SyscallFuncType = syscall::Result(uint64_t, uint64_t, uint64_t, uint64_t,
                                         uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType *, 5> syscall_table{
+extern "C" std::array<SyscallFuncType *, 6> syscall_table{
     syscall::LogString,  syscall::PutString,      syscall::Exit,
-    syscall::OpenWindow, syscall::WinWriteString,
+    syscall::OpenWindow, syscall::WinWriteString, syscall::WinFillRectangle,
 };
 
 void InitializeSysCall() {
