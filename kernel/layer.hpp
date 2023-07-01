@@ -34,6 +34,7 @@ class LayerManager {
    public:
     void SetDrawer(FrameBuffer* screen);
     Layer& NewLayer();
+    void RemoveLayer(unsigned int id);
 
     void Draw(const Rectangle<int>& area) const;
     void Draw(unsigned int id) const;

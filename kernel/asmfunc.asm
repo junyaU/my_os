@@ -302,6 +302,7 @@ WriteMSR: ; void WriteMSR(uint32_t msr, uint64_t value);
     ret  
 
 extern syscall_table
+extern GetCurrentTaskOSStackPointer
 
 ; システムコールされたときに呼ばれる
 global SyscallEntry
@@ -315,6 +316,22 @@ SyscallEntry: ; void SyscallEntry(void);
     mov rcx, r10
     and eax, 0xfffffff
     mov rbp, rsp
+
+    ; システムコールをOS用のスタックで実行する
+    and rsp, 0xfffffffffffffff0
+    push rax
+    push rdx
+    cli
+    call GetCurrentTaskOSStackPointer
+    sti
+    mov rdx, [rsp + 0] ; RDX
+    mov [rax -16], rdx
+    mov rdx, [rsp + 8] ; RAX
+    mov [rax -8], rdx
+
+    lea rsp, [rax - 16]
+    pop rdx
+    pop rax
     and rsp, 0xfffffffffffffff0
 
     call [syscall_table + 8 * eax]
