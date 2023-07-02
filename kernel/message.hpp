@@ -10,6 +10,7 @@ struct Message {
         kLayer,
         kLayerFinish,
         kMouseMove,
+        kMouseButton,
     } type;
 
     uint64_t source_task;
@@ -38,5 +39,11 @@ struct Message {
             int dx, dy;
             uint8_t buttons;
         } mouse_move;
+
+        struct {
+            int x, y;
+            int press;
+            int button;
+        } mouse_button;
     } arg;
 };

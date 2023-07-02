@@ -59,4 +59,7 @@ extern "C" void main(int argc, char** argv) {
             printf("unknown event: type = %d\n", events[0].type);
         }
     }
+
+    SyscallCloseWindow(layer_id);
+    exit(0);
 }
