@@ -9,6 +9,7 @@ struct Message {
         kKeyPush,
         kLayer,
         kLayerFinish,
+        kMouseMove,
     } type;
 
     uint64_t source_task;
@@ -31,5 +32,11 @@ struct Message {
             int x, y;
             int w, h;
         } layer;
+
+        struct {
+            int x, y;
+            int dx, dy;
+            uint8_t buttons;
+        } mouse_move;
     } arg;
 };
