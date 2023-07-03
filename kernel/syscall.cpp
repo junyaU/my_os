@@ -263,6 +263,15 @@ SYSCALL(ReadEvent) {
                 i++;
                 break;
 
+            case Message::kTimerTimeout:
+                if (msg->arg.timer.value < 0) {
+                    app_events[i].type = AppEvent::kTimerTimeout;
+                    app_events[i].arg.timer.timeout = msg->arg.timer.timeout;
+                    app_events[i].arg.timer.value = -msg->arg.timer.value;
+                    i++;
+                }
+                break;
+
             default:
                 break;
         }
@@ -271,17 +280,40 @@ SYSCALL(ReadEvent) {
     return {i, 0};
 }
 
+SYSCALL(CreateTimer) {
+    const unsigned int mode = arg1;
+    const int timer_value = arg2;
+    if (timer_value <= 0) {
+        return {0, EINVAL};
+    }
+
+    __asm__("cli");
+    const uint64_t task_id = task_manager->CurrentTask().ID();
+    __asm__("sti");
+
+    unsigned long timeout = arg3 * kTimerFreq / 1000;
+    if (mode & 1) {
+        timeout += timer_manager->CurrentTick();
+    }
+
+    __asm__("cli");
+    timer_manager->AddTimer(Timer{timeout, -timer_value, task_id});
+    __asm__("sti");
+
+    return {timeout * 1000 / kTimerFreq, 0};
+}
+
 #undef SYSCALL
 }  // namespace syscall
 
 using SyscallFuncType = syscall::Result(uint64_t, uint64_t, uint64_t, uint64_t,
                                         uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType *, 11> syscall_table{
+extern "C" std::array<SyscallFuncType *, 12> syscall_table{
     syscall::LogString,      syscall::PutString,      syscall::Exit,
     syscall::OpenWindow,     syscall::WinWriteString, syscall::WinFillRectangle,
     syscall::GetCurrentTick, syscall::WinRedraw,      syscall::WinDrawLine,
-    syscall::CloseWindow,    syscall::ReadEvent,
+    syscall::CloseWindow,    syscall::ReadEvent,      syscall::CreateTimer,
 };
 
 void InitializeSysCall() {
