@@ -11,6 +11,7 @@
 #include "memory_manager.hpp"
 #include "paging.hpp"
 #include "pci.hpp"
+#include "timer.hpp"
 
 namespace {
 WithError<int> MakeArgVector(char* command, char* first_arg, char** argv,
@@ -616,6 +617,15 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
     (*terminals)[task_id] = terminal;
     __asm__("sti");
 
+    auto add_blink_timer = [task_id](unsigned long t) {
+        timer_manager->AddTimer(
+            Timer{t + static_cast<int>(kTimerFreq * 0.5), 1, task_id});
+    };
+
+    add_blink_timer(timer_manager->CurrentTick());
+
+    bool window_is_active = false;
+
     while (true) {
         __asm__("cli");
         auto msg = task.ReceiveMessage();
@@ -628,13 +638,17 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
 
         switch (msg->type) {
             case Message::kTimerTimeout: {
-                const auto area = terminal->BlinkCursor();
-                Message msg = MakeLayerMessage(task_id, terminal->LayerID(),
-                                               LayerOperation::DrawArea, area);
+                add_blink_timer(msg->arg.timer.timeout);
+                if (window_is_active) {
+                    const auto area = terminal->BlinkCursor();
+                    Message msg =
+                        MakeLayerMessage(task_id, terminal->LayerID(),
+                                         LayerOperation::DrawArea, area);
 
-                __asm__("cli");
-                task_manager->SendMessage(1, msg);
-                __asm__("sti");
+                    __asm__("cli");
+                    task_manager->SendMessage(1, msg);
+                    __asm__("sti");
+                }
             } break;
             case Message::kKeyPush: {
                 if (msg->arg.keyboard.press) {
@@ -651,6 +665,10 @@ void TaskTerminal(uint64_t task_id, int64_t data) {
                     __asm__("sti");
                 }
             } break;
+
+            case Message::kWindowActive:
+                window_is_active = msg->arg.window_active.activate;
+                break;
             default:
                 break;
         }
