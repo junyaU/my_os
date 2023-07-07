@@ -159,11 +159,11 @@ extern "C" void KernelMainNewStack(
 
     terminals = new std::map<uint64_t, Terminal *>;
 
-    task_manager->NewTask().InitContext(TaskTerminal, 0).Wakeup().ID();
-
     usb::xhci::Initialize();
     InitializeKeyboard();
     InitializeMouse();
+
+    task_manager->NewTask().InitContext(TaskTerminal, 0).Wakeup().ID();
 
     char str[128];
 
