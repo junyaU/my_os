@@ -1,5 +1,7 @@
 #include "interrupt.hpp"
 
+#include <csignal>
+
 #include "asmfunc.h"
 #include "drawing.hpp"
 #include "font.hpp"
@@ -70,9 +72,21 @@ void PrintFrame(InterruptFrame *frame, const char *exp_name) {
              {output_pos + kFontHorizonPixels * 12, kFontVerticalPixels * 3});
 }
 
+void KillApp(InterruptFrame *frame) {
+    const auto cpl = frame->cs & 0x3;
+    if (cpl != 3) {
+        return;
+    }
+
+    auto &task = task_manager->CurrentTask();
+    __asm__("sti");
+    ExitApp(task.OSStackPointer(), 128 + SIGSEGV);
+}
+
 #define FaultHandlerWithError(fault_name)                                  \
     __attribute__((interrupt)) void IntHandler##fault_name(                \
         InterruptFrame *frame, uint64_t error_code) {                      \
+        KillApp(frame);                                                    \
         PrintFrame(frame, "#" #fault_name);                                \
         WriteString(*screen_drawer, {500, kFontVerticalPixels * 4}, "ERR", \
                     {255, 255, 255});                                      \
@@ -84,6 +98,7 @@ void PrintFrame(InterruptFrame *frame, const char *exp_name) {
 #define FaultHandlerNoError(fault_name)                     \
     __attribute__((interrupt)) void IntHandler##fault_name( \
         InterruptFrame *frame) {                            \
+        KillApp(frame);                                     \
         PrintFrame(frame, "#" #fault_name);                 \
         while (1) __asm__("hlt");                           \
     }

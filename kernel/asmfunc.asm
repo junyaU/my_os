@@ -360,3 +360,17 @@ SyscallEntry: ; void SyscallEntry(void);
     pop rbx
 
     ret
+
+global ExitApp ; void ExitApp(uint64_t rsp = rdi, int32_t ret_val = esi);
+ExitApp:
+    mov rsp, rdi ; OSのスタックに戻る
+    mov eax, esi ; 戻り値
+
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbp
+    pop rbx
+
+    ret
