@@ -1,6 +1,7 @@
 #include "task.hpp"
 
 #include "asmfunc.h"
+#include "fat.hpp"
 #include "segment.hpp"
 #include "timer.hpp"
 
@@ -71,6 +72,10 @@ std::optional<Message> Task::ReceiveMessage() {
     auto msg = msgs_.front();
     msgs_.pop_front();
     return msg;
+}
+
+std::vector<std::unique_ptr<fat::FileDescriptor>>& Task::Files() {
+    return files_;
 }
 
 TaskManager::TaskManager() {
