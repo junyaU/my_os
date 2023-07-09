@@ -74,9 +74,7 @@ std::optional<Message> Task::ReceiveMessage() {
     return msg;
 }
 
-std::vector<std::unique_ptr<fat::FileDescriptor>>& Task::Files() {
-    return files_;
-}
+std::vector<std::unique_ptr<FileDescriptor>>& Task::Files() { return files_; }
 
 TaskManager::TaskManager() {
     Task& task = NewTask().SetLevel(current_level_).SetRunning(true);
