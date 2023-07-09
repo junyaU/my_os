@@ -327,6 +327,20 @@ size_t AllocateFD(Task &task) {
     task.Files().emplace_back();
     return num_files;
 }
+
+std::pair<fat::DirectoryEntry *, int> CreateFile(const char *path) {
+    auto [file, err] = fat::CreateFile(path);
+    switch (err.Cause()) {
+        case Error::kIsDirectory:
+            return {file, EISDIR};
+        case Error::kNoSuchEntry:
+            return {file, ENOENT};
+        case Error::kNoEnoughMemory:
+            return {file, ENOSPC};
+        default:
+            return {file, 0};
+    }
+}
 }  // namespace
 
 SYSCALL(OpenFile) {
@@ -341,19 +355,24 @@ SYSCALL(OpenFile) {
         return {0, 0};
     }
 
-    if ((flags & O_ACCMODE) == O_WRONLY) {
-        return {0, EINVAL};
-    }
+    auto [file, post_slash] = fat::FindFile(path);
+    if (file == nullptr) {
+        if ((flags & O_CREAT) == 0) {
+            return {0, ENOENT};
+        }
 
-    auto [dir_entry, post_slash] = fat::FindFile(path);
-    if (dir_entry == nullptr) {
-        return {0, ENOENT};
-    } else if (dir_entry->attr != fat::Attribute::kDirectory && post_slash) {
+        auto [new_file, err] = CreateFile(path);
+        if (err) {
+            return {0, err};
+        }
+
+        file = new_file;
+    } else if (file->attr != fat::Attribute::kDirectory && post_slash) {
         return {0, ENOENT};
     }
 
     size_t fd = AllocateFD(task);
-    task.Files()[fd] = std::make_unique<fat::FileDescriptor>(*dir_entry);
+    task.Files()[fd] = std::make_unique<fat::FileDescriptor>(*file);
 
     return {fd, 0};
 }
