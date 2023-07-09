@@ -110,6 +110,7 @@ class FileDescriptor : public ::FileDescriptor {
    public:
     explicit FileDescriptor(DirectoryEntry& fat_entry);
     size_t Read(void* buf, size_t len) override;
+    size_t Write(const void* buf, size_t len) override;
 
    private:
     // ファイルへの参照
@@ -120,5 +121,9 @@ class FileDescriptor : public ::FileDescriptor {
     unsigned long rd_cluster_ = 0;
     // ファイルの読み込み位置が属するクラスタ内のオフセット
     size_t rd_cluster_off_ = 0;
+
+    size_t wr_off_ = 0;
+    unsigned long wr_cluster_ = 0;
+    size_t wr_cluster_off_ = 0;
 };
 }  // namespace fat
