@@ -83,6 +83,12 @@ void KillApp(InterruptFrame *frame) {
     ExitApp(task.OSStackPointer(), 128 + SIGSEGV);
 }
 
+__attribute__((interrupt)) void IntHandlerPF(InterruptFrame *frame,
+                                             uint64_t error_code) {
+    // PF発生時の仮想アドレス
+    uint64_t cr2 = GetCR2();
+}
+
 #define FaultHandlerWithError(fault_name)                                  \
     __attribute__((interrupt)) void IntHandler##fault_name(                \
         InterruptFrame *frame, uint64_t error_code) {                      \
@@ -108,9 +114,9 @@ FaultHandlerNoError(DE) FaultHandlerNoError(DB) FaultHandlerNoError(BP)
         FaultHandlerNoError(NM) FaultHandlerWithError(DF)
             FaultHandlerWithError(TS) FaultHandlerWithError(NP)
                 FaultHandlerWithError(SS) FaultHandlerWithError(GP)
-                    FaultHandlerWithError(PF) FaultHandlerNoError(MF)
-                        FaultHandlerWithError(AC) FaultHandlerNoError(MC)
-                            FaultHandlerNoError(XM) FaultHandlerNoError(VE)
+                    FaultHandlerNoError(MF) FaultHandlerWithError(AC)
+                        FaultHandlerNoError(MC) FaultHandlerNoError(XM)
+                            FaultHandlerNoError(VE)
 }  // namespace
 
 void InitializeInterrupt() {
@@ -138,7 +144,6 @@ void InitializeInterrupt() {
     set_idt_entry(11, IntHandlerNP);
     set_idt_entry(12, IntHandlerSS);
     set_idt_entry(13, IntHandlerGP);
-    set_idt_entry(14, IntHandlerPF);
     set_idt_entry(16, IntHandlerMF);
     set_idt_entry(17, IntHandlerAC);
     set_idt_entry(18, IntHandlerMC);

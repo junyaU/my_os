@@ -23,10 +23,10 @@ extern "C" void main(int argc, char** argv) {
     size_t bytes;
     while ((bytes = fread(buf, 1, sizeof(buf), fp_src)) > 0) {
         const size_t written = fwrite(buf, 1, bytes, fp_dest);
-        if (bytes != written) {
-            printf("failed to write to %s\n", argv[2]);
-            exit(1);
-        }
+        // if (bytes != written) {
+        //     printf("failed to write to %s\n", argv[2]);
+        //     exit(1);
+        // }
     }
 
     exit(0);

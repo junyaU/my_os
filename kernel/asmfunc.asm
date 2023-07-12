@@ -84,6 +84,11 @@ LoadIDT:
     pop rbp
     ret
 
+global GetCR2 ; uint64_t GetCR2(void);
+GetCR2:
+    mov rax, cr2
+    ret
+
 global GetCR3 ; uint64_t GetCR3(void);
 GetCR3:
     mov rax, cr3
