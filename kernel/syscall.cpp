@@ -395,18 +395,31 @@ SYSCALL(ReadFile) {
     return {task.Files()[fd]->Read(buf, count), 0};
 }
 
+SYSCALL(DemandPages) {
+    const size_t num_pages = arg1;
+
+    __asm__("cli");
+    auto &task = task_manager->CurrentTask();
+    __asm__("sti");
+
+    const uint64_t dpaging_end = task.DPagingEnd();
+    task.SetDPagingEnd(dpaging_end + num_pages * 4096);
+
+    return {dpaging_end, 0};
+}
+
 #undef SYSCALL
 }  // namespace syscall
 
 using SyscallFuncType = syscall::Result(uint64_t, uint64_t, uint64_t, uint64_t,
                                         uint64_t, uint64_t);
 
-extern "C" std::array<SyscallFuncType *, 0xe> syscall_table{
+extern "C" std::array<SyscallFuncType *, 0xf> syscall_table{
     syscall::LogString,      syscall::PutString,      syscall::Exit,
     syscall::OpenWindow,     syscall::WinWriteString, syscall::WinFillRectangle,
     syscall::GetCurrentTick, syscall::WinRedraw,      syscall::WinDrawLine,
     syscall::CloseWindow,    syscall::ReadEvent,      syscall::CreateTimer,
-    syscall::OpenFile,       syscall::ReadFile,
+    syscall::OpenFile,       syscall::ReadFile,       syscall::DemandPages,
 };
 
 void InitializeSysCall() {

@@ -6,6 +6,7 @@
 #include "drawing.hpp"
 #include "font.hpp"
 #include "message.hpp"
+#include "paging.hpp"
 #include "segment.hpp"
 #include "task.hpp"
 #include "timer.hpp"
@@ -85,8 +86,16 @@ void KillApp(InterruptFrame *frame) {
 
 __attribute__((interrupt)) void IntHandlerPF(InterruptFrame *frame,
                                              uint64_t error_code) {
-    // PF発生時の仮想アドレス
     uint64_t cr2 = GetCR2();
+    if (auto err = HandlePageFault(error_code, cr2); !err) {
+        return;
+    }
+
+    KillApp(frame);
+    PrintFrame(frame, "#PF");
+    WriteString(*screen_drawer, {500, 16 * 4}, "ERR", {0, 0, 0});
+    PrintHex(error_code, 16, {500 + 8 * 4, 16 * 4});
+    while (true) __asm__("hlt");
 }
 
 #define FaultHandlerWithError(fault_name)                                  \
@@ -144,6 +153,7 @@ void InitializeInterrupt() {
     set_idt_entry(11, IntHandlerNP);
     set_idt_entry(12, IntHandlerSS);
     set_idt_entry(13, IntHandlerGP);
+    set_idt_entry(14, IntHandlerPF);
     set_idt_entry(16, IntHandlerMF);
     set_idt_entry(17, IntHandlerAC);
     set_idt_entry(18, IntHandlerMC);

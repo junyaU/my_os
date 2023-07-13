@@ -90,8 +90,10 @@ uintptr_t GetFirstLoadAddress(Elf64_Ehdr* ehdr) {
     return 0;
 }
 
-Error CopyLoadSegments(Elf64_Ehdr* ehdr) {
+WithError<uint64_t> CopyLoadSegments(Elf64_Ehdr* ehdr) {
     auto phdr = GetProgramHeader(ehdr);
+    uint64_t last_addr = 0;
+
     for (int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type != PT_LOAD) {
             continue;
@@ -99,11 +101,12 @@ Error CopyLoadSegments(Elf64_Ehdr* ehdr) {
 
         LinearAddress4Level dest_addr;
         dest_addr.value = phdr[i].p_vaddr;
+        last_addr = std::max(last_addr, phdr[i].p_vaddr + phdr[i].p_memsz);
 
         const auto num_4kpages = (phdr[i].p_memsz + 4095) / 4096;
 
         if (auto err = SetupPageMaps(dest_addr, num_4kpages)) {
-            return err;
+            return {last_addr, err};
         }
 
         const auto src = reinterpret_cast<uint8_t*>(ehdr) + phdr[i].p_offset;
@@ -113,24 +116,20 @@ Error CopyLoadSegments(Elf64_Ehdr* ehdr) {
         memset(dst + phdr[i].p_filesz, 0, phdr[i].p_memsz - phdr[i].p_filesz);
     }
 
-    return MAKE_ERROR(Error::kSuccess);
+    return {last_addr, MAKE_ERROR(Error::kSuccess)};
 }
 
-Error LoadELF(Elf64_Ehdr* ehdr) {
+WithError<uint64_t> LoadELF(Elf64_Ehdr* ehdr) {
     if (ehdr->e_type != ET_EXEC) {
-        return MAKE_ERROR(Error::kInvalidFormat);
+        return {0, MAKE_ERROR(Error::kInvalidFormat)};
     }
 
     const auto address_first = GetFirstLoadAddress(ehdr);
     if (address_first < 0xffff'8000'0000'0000) {
-        return MAKE_ERROR(Error::kInvalidFormat);
+        return {0, MAKE_ERROR(Error::kInvalidFormat)};
     }
 
-    if (auto err = CopyLoadSegments(ehdr)) {
-        return err;
-    }
-
-    return MAKE_ERROR(Error::kSuccess);
+    return CopyLoadSegments(ehdr);
 }
 
 WithError<PageMapEntry*> SetupPML4(Task& current_task) {
@@ -321,8 +320,9 @@ Error Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry,
         return pml4.error;
     }
 
-    if (auto err = (LoadELF(elf_header))) {
-        return err;
+    auto [elf_last_addr, elf_err] = LoadELF(elf_header);
+    if (elf_err) {
+        return elf_err;
     }
 
     // カノニカルアドレスの最後のページ
@@ -351,6 +351,11 @@ Error Terminal::ExecuteFile(const fat::DirectoryEntry& file_entry,
         task.Files().push_back(
             std::make_unique<TerminalFileDescriptor>(task, *this));
     }
+
+    const uint64_t elf_next_page =
+        (elf_last_addr + 4095) & 0xffff'ffff'ffff'f000;
+    task.SetDPagingBegin(elf_next_page);
+    task.SetDPagingEnd(elf_next_page);
 
     auto entry_addr = elf_header->e_entry;
     int ret =

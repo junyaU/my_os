@@ -5,6 +5,7 @@
 #include "asmfunc.h"
 #include "error.hpp"
 #include "memory_manager.hpp"
+#include "task.hpp"
 
 namespace {
 const uint64_t kPageSize4K = 4096;
@@ -137,4 +138,18 @@ Error SetupPageMaps(LinearAddress4Level addr, size_t num_4kpages) {
 Error CleanPageMaps(LinearAddress4Level addr) {
     auto pml4_table = reinterpret_cast<PageMapEntry*>(GetCR3());
     return CleanPageMap(pml4_table, 4, addr);
+}
+
+Error HandlePageFault(uint64_t error_code, uint64_t casual_addr) {
+    // 権限違反の場合
+    if (error_code & 1) {
+        return MAKE_ERROR(Error::kAlreadyAllocated);
+    }
+
+    auto& task = task_manager->CurrentTask();
+    if (casual_addr < task.DPagingBegin() || task.DPagingEnd() <= casual_addr) {
+        return MAKE_ERROR(Error::kAlreadyAllocated);
+    }
+
+    return SetupPageMaps(LinearAddress4Level{casual_addr}, 1);
 }
