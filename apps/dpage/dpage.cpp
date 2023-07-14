@@ -19,7 +19,6 @@ extern "C" void main(int argc, char** argv) {
 
     SyscallResult res = SyscallDemandPages(1, 0);
     if (res.error) {
-        printf("hello");
         exit(1);
     }
 
@@ -35,15 +34,17 @@ extern "C" void main(int argc, char** argv) {
         }
         buf += 4096;
     }
+
     total += n;
     printf("size of %s = %lu bytes\n", filename, total);
 
     size_t num = 0;
-    for (int i = 0; i < total; ++i) {
+    for (int i = 0; i < total; i++) {
         if (buf0[i] == ch) {
-            ++num;
+            num++;
         }
     }
+
     printf("the number of '%c' (0x%02x) = %lu\n", ch, ch, num);
     exit(0);
 }
