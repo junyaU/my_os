@@ -117,6 +117,32 @@ Error CleanPageMap(PageMapEntry* page_map, int page_map_level,
 
     return MAKE_ERROR(Error::kSuccess);
 }
+
+const FileMapping* FindFileMapping(const std::vector<FileMapping>& fmaps,
+                                   uint64_t casual_vaddr) {
+    for (const FileMapping& m : fmaps) {
+        if (m.vaddr_begin <= casual_vaddr && casual_vaddr < m.vaddr_end) {
+            return &m;
+        }
+    }
+
+    return nullptr;
+}
+
+Error PreparePageCache(FileDescriptor& fd, const FileMapping& m,
+                       uint64_t casual_vaddr) {
+    LinearAddress4Level addr{casual_vaddr};
+    addr.parts.offset = 0;
+    if (auto err = SetupPageMaps(addr, 1)) {
+        return err;
+    }
+
+    const long file_offset = addr.value - m.vaddr_begin;
+    void* page_cache = reinterpret_cast<void*>(addr.value);
+    fd.Load(page_cache, 4096, file_offset);
+
+    return MAKE_ERROR(Error::kSuccess);
+}
 }  // namespace
 
 WithError<PageMapEntry*> NewPageMap() {
@@ -147,8 +173,12 @@ Error HandlePageFault(uint64_t error_code, uint64_t casual_addr) {
     }
 
     auto& task = task_manager->CurrentTask();
-    if (casual_addr < task.DPagingBegin() || task.DPagingEnd() <= casual_addr) {
-        return MAKE_ERROR(Error::kAlreadyAllocated);
+    if (task.DPagingBegin() <= casual_addr && casual_addr < task.DPagingEnd()) {
+        return SetupPageMaps(LinearAddress4Level{casual_addr}, 1);
+    }
+
+    if (auto m = FindFileMapping(task.FileMaps(), casual_addr)) {
+        return PreparePageCache(*task.Files()[m->fd], *m, casual_addr);
     }
 
     return SetupPageMaps(LinearAddress4Level{casual_addr}, 1);
