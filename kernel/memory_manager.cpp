@@ -1,5 +1,7 @@
 #include "memory_manager.hpp"
 
+#include <bitset>
+
 BitmapMemoryManager::BitmapMemoryManager()
     : alloc_map_{}, base_frame_{FrameID{0}}, end_frame_{FrameID{kFrameCount}} {}
 
@@ -13,6 +15,16 @@ void BitmapMemoryManager::SetMemoryRange(FrameID base_frame,
                                          FrameID end_frame) {
     base_frame_ = base_frame;
     end_frame_ = end_frame;
+}
+
+MemoryStat BitmapMemoryManager::Stat() const {
+    size_t sum = 0;
+    for (int i = base_frame_.ID() / kBitsPerBitMapElement;
+         i < end_frame_.ID() / kBitsPerBitMapElement; i++) {
+        sum += std::bitset<kBitsPerBitMapElement>(alloc_map_[i]).count();
+    }
+
+    return {sum, end_frame_.ID() - base_frame_.ID()};
 }
 
 bool BitmapMemoryManager::GetBit(FrameID frame_id) const {
