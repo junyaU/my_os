@@ -47,6 +47,10 @@ SetCSSS:
     pop rbp
     ret
 
+global SetCR0  ; void SetCR0(uint64_t value);
+SetCR0:
+    mov cr0, rdi
+    ret
 
 global SetCR3
 SetCR3:
@@ -82,6 +86,11 @@ LoadIDT:
     lidt [rsp]
     mov rsp, rbp
     pop rbp
+    ret
+
+global GetCR0  ; uint64_t GetCR0();
+GetCR0:
+    mov rax, cr0
     ret
 
 global GetCR2 ; uint64_t GetCR2(void);
@@ -378,4 +387,9 @@ ExitApp:
     pop rbp
     pop rbx
 
+    ret
+
+global InvalidateTLB ; void InvalidateTLB(uint64_t addr);
+InvalidateTLB:
+    invlpg [rdi]
     ret
