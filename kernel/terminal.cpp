@@ -203,7 +203,7 @@ WithError<AppLoadInfo> LoadApp(fat::DirectoryEntry& file_entry, Task& task) {
     }
 
     std::vector<uint8_t> file_buf(file_entry.file_size);
-    fat::LoadFile(&file_buf, file_buf.size(), file_entry);
+    fat::LoadFile(&file_buf[0], file_buf.size(), file_entry);
 
     auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
     if (memcmp(elf_header->e_ident,
@@ -223,7 +223,7 @@ WithError<AppLoadInfo> LoadApp(fat::DirectoryEntry& file_entry, Task& task) {
     app_loads->insert(std::make_pair(&file_entry, app_load));
 
     if (auto [pml4, err] = SetupPML4(task); err) {
-        return {{}, err};
+        return {app_load, err};
     } else {
         app_load.pml4 = pml4;
     }

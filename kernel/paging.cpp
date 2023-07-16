@@ -66,7 +66,6 @@ WithError<size_t> SetupPageMap(PageMapEntry* page_map, int page_map_level,
             return {num_4kpages, err};
         }
 
-        page_map[entry_index].bits.writable = writable;
         page_map[entry_index].bits.user = 1;
 
         if (page_map_level == 1) {
@@ -245,11 +244,6 @@ Error HandlePageFault(uint64_t error_code, uint64_t casual_addr) {
     if (present && rw && user) {
         return CopyOnePage(casual_addr);
     } else if (present) {
-        return MAKE_ERROR(Error::kAlreadyAllocated);
-    }
-
-    // 権限違反の場合
-    if (error_code & 1) {
         return MAKE_ERROR(Error::kAlreadyAllocated);
     }
 
