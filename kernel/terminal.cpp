@@ -373,7 +373,8 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command,
         return argc.error;
     }
 
-    LinearAddress4Level stack_frame_addr{0xffff'ffff'ffff'e000};
+    const int stack_size = 8 * 4096;
+    LinearAddress4Level stack_frame_addr{0xffff'ffff'ffff'f000 - stack_size};
     if (auto err = SetupPageMaps(stack_frame_addr, 1)) {
         return err;
     }
@@ -388,11 +389,11 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command,
     task.SetDPagingBegin(elf_next_page);
     task.SetDPagingEnd(elf_next_page);
 
-    task.SetFileMapEnd(0xffff'ffff'ffff'e000);
+    task.SetFileMapEnd(stack_frame_addr.value);
 
-    int ret =
-        CallApp(argc.value, argv, 3 << 3 | 3, app_load.entry,
-                stack_frame_addr.value + 4096 - 8, &task.OSStackPointer());
+    int ret = CallApp(argc.value, argv, 3 << 3 | 3, app_load.entry,
+                      stack_frame_addr.value + stack_size - 8,
+                      &task.OSStackPointer());
 
     task.Files().clear();
     task.FileMaps().clear();
@@ -556,7 +557,7 @@ void Terminal::ExecuteLine() {
 
                 const int u8_remain = CountUTF8Size(u8buf[0]) - 1;
                 if (u8_remain > 0 &&
-                    fd.Read(&u8buf[0], u8_remain) != u8_remain) {
+                    fd.Read(&u8buf[1], u8_remain) != u8_remain) {
                     break;
                 }
 
