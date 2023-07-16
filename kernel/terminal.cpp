@@ -408,7 +408,11 @@ Error Terminal::ExecuteFile(fat::DirectoryEntry& file_entry, char* command,
     return FreePML4(task);
 }
 
-void Terminal::Print(char c) {
+void Terminal::Print(char32_t c) {
+    if (!show_window_) {
+        return;
+    }
+
     auto newline = [this]() {
         cursor_pos_.x = 0;
         if (cursor_pos_.y < kRows - 1) {
@@ -418,18 +422,22 @@ void Terminal::Print(char c) {
         }
     };
 
-    if (c == '\n') {
+    if (c == U'\n') {
         newline();
-    } else {
-        if (show_window_) {
-            WriteAscii(*window_->Drawer(), CalcCursorPos(), c, {255, 255, 255});
-        }
-
+    } else if (IsHankaku(c)) {
         if (cursor_pos_.x == kColumns) {
             newline();
-        } else {
-            ++cursor_pos_.x;
         }
+
+        WriteUnicode(*window_->Drawer(), CalcCursorPos(), c, {255, 255, 255});
+        cursor_pos_.x++;
+    } else {
+        if (cursor_pos_.x >= kColumns - 1) {
+            newline();
+        }
+
+        WriteUnicode(*window_->Drawer(), CalcCursorPos(), c, {255, 255, 255});
+        cursor_pos_.x += 2;
     }
 }
 
@@ -537,22 +545,23 @@ void Terminal::ExecuteLine() {
             sprintf(s, "%s is not directory\n", name);
             Print(s);
         } else {
-            auto cluster = file_entry->FirstCluster();
-            auto remain_bytes = file_entry->file_size;
+            fat::FileDescriptor fd{*file_entry};
+            char u8buf[4];
 
             DrawCursor(false);
-
-            while (cluster != 0 && cluster != fat::kEndOfClusterchain) {
-                char* p = fat::GetSectorByCluster<char>(cluster);
-
-                int i = 0;
-                for (; i < fat::bytes_per_cluster && i < remain_bytes; ++i) {
-                    Print(*p);
-                    p++;
+            while (true) {
+                if (fd.Read(&u8buf[0], 1) != 1) {
+                    break;
                 }
 
-                remain_bytes -= i;
-                cluster = fat::NextCluster(cluster);
+                const int u8_remain = CountUTF8Size(u8buf[0]) - 1;
+                if (u8_remain > 0 &&
+                    fd.Read(&u8buf[0], u8_remain) != u8_remain) {
+                    break;
+                }
+
+                const auto [u32, u8_next] = ConvertUTF8To32(u8buf);
+                Print(u32 ? u32 : U'□');
             }
 
             DrawCursor(true);

@@ -38,6 +38,14 @@ for APP in $(ls ~/my_os/apps); do
     fi
 done
 
+#リソース配置
+for R in $(ls ~/my_os/resource); do
+    echo "copy $R"
+    if [ -f ~/my_os/resource/$R ]; then
+        cp ~/my_os/resource/$R ~/mnt/
+    fi
+done
+
 # カーネル配置
 cp ~/my_os/kernel/kernel.elf mnt
 hdiutil detach mnt
