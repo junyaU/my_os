@@ -44,5 +44,5 @@ extern "C" void main(int argc, char **argv) {
 
     printf("%ld\n", result);
 
-    exit(0);
+    exit(static_cast<int>(result));
 }
