@@ -74,7 +74,7 @@ std::optional<Message> Task::ReceiveMessage() {
     return msg;
 }
 
-std::vector<std::unique_ptr<FileDescriptor>>& Task::Files() { return files_; }
+std::vector<std::shared_ptr<FileDescriptor>>& Task::Files() { return files_; }
 
 uint64_t Task::DPagingBegin() const { return dpaging_begin_; }
 
