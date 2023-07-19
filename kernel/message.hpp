@@ -12,6 +12,7 @@ struct Message {
         kMouseMove,
         kMouseButton,
         kWindowActive,
+        kPipe
     } type;
 
     uint64_t source_task;
@@ -51,5 +52,10 @@ struct Message {
         struct {
             int activate;
         } window_active;
+
+        struct {
+            char data[16];
+            uint8_t len;
+        } pipe;
     } arg;
 };

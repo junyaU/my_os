@@ -185,6 +185,24 @@ Error TaskManager::SendMessage(uint64_t id, const Message& msg) {
 
 Task& TaskManager::CurrentTask() { return *running_[current_level_].front(); }
 
+WithError<int> TaskManager::WaitFinish(uint64_t task_id) {
+    int exit_code;
+    Task* curret_task = &CurrentTask();
+
+    while (true) {
+        if (auto it = finish_tasks_.find(task_id); it != finish_tasks_.end()) {
+            exit_code = it->second;
+            finish_tasks_.erase(it);
+            break;
+        }
+
+        finish_waiter_[task_id] = curret_task;
+        Sleep(curret_task);
+    }
+
+    return {exit_code, MAKE_ERROR(Error::kSuccess)};
+}
+
 void TaskManager::ChangeLevelRunning(Task* task, int level) {
     if (level < 0 || level == task->Level()) {
         return;

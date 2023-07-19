@@ -1,6 +1,7 @@
 #include "terminal.hpp"
 
 #include <cstring>
+#include <limits>
 
 #include "asmfunc.h"
 #include "console.hpp"
@@ -473,6 +474,7 @@ void Terminal::ExecuteLine() {
     char* command = &linebuf_[0];
     char* first_arg = strchr(command, ' ');
     char* redirect_char = strchr(command, '>');
+    char* pipe_char = strchr(command, '|');
     if (first_arg) {
         *first_arg = 0;
         ++first_arg;
@@ -507,6 +509,29 @@ void Terminal::ExecuteLine() {
         }
 
         files_[1] = std::make_shared<fat::FileDescriptor>(*file);
+    }
+
+    std::shared_ptr<PipeDescriptor> pipe_fd;
+    uint64_t subtask_id = 0;
+
+    if (pipe_char) {
+        *pipe_char = 0;
+        char* sub_command = &pipe_char[1];
+        while (isspace(*sub_command)) {
+            ++sub_command;
+        }
+
+        auto& sub_task = task_manager->NewTask();
+        pipe_fd = std::make_shared<PipeDescriptor>(sub_task);
+        auto terminal_d = new TerminalDescriptor{
+            sub_command, true, false, {pipe_fd, files_[1], files_[2]}};
+        files_[1] = pipe_fd;
+
+        subtask_id = sub_task
+                         .InitContext(TaskTerminal,
+                                      reinterpret_cast<int64_t>(terminal_d))
+                         .Wakeup()
+                         .ID();
     }
 
     if (strcmp(command, "echo") == 0) {
@@ -626,6 +651,17 @@ void Terminal::ExecuteLine() {
             } else {
                 exit_code = ec;
             }
+        }
+    }
+
+    if (pipe_fd) {
+        pipe_fd->FinishWrite();
+        __asm__("cli");
+        auto [error_code, err] = task_manager->WaitFinish(subtask_id);
+        __asm__("sti");
+
+        if (err) {
+            printk("failed to wait finish: %s\n", err.Name());
         }
     }
 
@@ -801,4 +837,36 @@ size_t TerminalFileDescriptor::Write(const void* buf, size_t len) {
 
 size_t TerminalFileDescriptor::Load(void* buf, size_t len, size_t offset) {
     return 0;
+}
+
+size_t PipeDescriptor::Read(void* buf, size_t len) {
+    if (len_ > 0) {
+    }
+}
+
+size_t PipeDescriptor::Write(const void* buf, size_t len) {
+    auto bufc = reinterpret_cast<const char*>(buf);
+    Message msg{Message::kPipe};
+    size_t sent_bytes = 0;
+
+    while (sent_bytes < len) {
+        msg.arg.pipe.len =
+            std::min(len - sent_bytes, sizeof(msg.arg.pipe.data));
+        memcpy(msg.arg.pipe.data, &bufc[sent_bytes], msg.arg.pipe.len);
+        sent_bytes += msg.arg.pipe.len;
+
+        __asm__("cli");
+        task_.SendMessage(msg);
+        __asm__("sti");
+    }
+
+    return len;
+}
+
+void PipeDescriptor::FinishWrite() {
+    Message msg{Message::kPipe};
+    msg.arg.pipe.len = 0;
+    __asm__("cli");
+    task_.SendMessage(msg);
+    __asm__("sti");
 }

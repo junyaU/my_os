@@ -20,6 +20,13 @@ struct AppLoadInfo {
 
 extern std::map<fat::DirectoryEntry*, AppLoadInfo>* app_loads;
 
+struct TerminalDescriptor {
+    std::string command_line;
+    bool exit_after_command;
+    bool show_window;
+    std::array<std::shared_ptr<FileDescriptor>, 3> files;
+};
+
 class Terminal {
    public:
     static const int kRows = 15, kColumns = 60;
@@ -74,4 +81,21 @@ class TerminalFileDescriptor : public FileDescriptor {
 
    private:
     Terminal& term_;
+};
+
+class PipeDescriptor : public FileDescriptor {
+   public:
+    explicit PipeDescriptor(Task& task);
+    size_t Read(void* buf, size_t len) override;
+    size_t Write(const void* buf, size_t len) override;
+    size_t Size() const override { return 0; }
+    size_t Load(void* buf, size_t len, size_t offset) override { return 0; }
+
+    void FinishWrite();
+
+   private:
+    Task& task_;
+    char data_[16];
+    size_t len_{0};
+    bool closed_{false};
 };
