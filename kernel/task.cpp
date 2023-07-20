@@ -185,6 +185,26 @@ Error TaskManager::SendMessage(uint64_t id, const Message& msg) {
 
 Task& TaskManager::CurrentTask() { return *running_[current_level_].front(); }
 
+void TaskManager::Finish(int exit_code) {
+    Task* current_task = RotateCurrentRunQueue(true);
+
+    const auto task_id = current_task->ID();
+
+    auto it = std::find_if(
+        tasks_.begin(), tasks_.end(),
+        [current_task](const auto& t) { return t.get() == current_task; });
+    tasks_.erase(it);
+
+    finish_tasks_[task_id] = exit_code;
+    if (auto it = finish_waiter_.find(task_id); it != finish_waiter_.end()) {
+        auto waiter = it->second;
+        finish_waiter_.erase(it);
+        Wakeup(waiter);
+    }
+
+    RestoreContext(&CurrentTask().Context());
+}
+
 WithError<int> TaskManager::WaitFinish(uint64_t task_id) {
     int exit_code;
     Task* curret_task = &CurrentTask();
