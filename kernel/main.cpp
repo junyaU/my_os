@@ -37,76 +37,6 @@
 
 void operator delete(void *obj) noexcept {}
 
-std::shared_ptr<ToplevelWindow> main_window;
-unsigned int main_window_layer_id;
-void InitializeMainWindow() {
-    main_window = std::make_shared<ToplevelWindow>(
-        160, 52, screen_config.pixel_format, "Uchizono desu");
-
-    main_window_layer_id = layer_manager->NewLayer()
-                               .SetWindow(main_window)
-                               .Move({300, 100})
-                               .SetDraggable(true)
-                               .ID();
-
-    layer_manager->UpDown(main_window_layer_id,
-                          std::numeric_limits<int>::max());
-}
-
-std::shared_ptr<ToplevelWindow> text_window;
-unsigned int text_window_layer_id;
-void InitializeTextWindow() {
-    const int width = 160;
-    const int height = 52;
-    text_window = std::make_shared<ToplevelWindow>(
-        width, height, screen_config.pixel_format, "Text Box Test");
-    DrawTextbox(*text_window->InnerDrawer(), {0, 0}, text_window->InnerSize());
-
-    text_window_layer_id = layer_manager->NewLayer()
-                               .SetWindow(text_window)
-                               .SetDraggable(true)
-                               .Move({500, 100})
-                               .ID();
-
-    layer_manager->UpDown(text_window_layer_id,
-                          std::numeric_limits<int>::max());
-}
-
-int text_window_index;
-
-void DrawTextCursor(bool visible) {
-    const auto color = visible ? ToColor(0) : ToColor(0xffffff);
-    const auto position = Vector2D<int>{4 + 8 * text_window_index, 5};
-    FillRectangle(*text_window->InnerDrawer(), position,
-                  {kFontHorizonPixels - 1, kFontVerticalPixels - 1}, color);
-}
-
-void InputTextWindow(char c) {
-    if (c == 0) {
-        return;
-    }
-
-    auto pos = []() { return Vector2D<int>{4 + 8 * text_window_index, 6}; };
-
-    const int max_chars = (text_window->InnerSize().x - 8) / 8 - 1;
-
-    if (c == '\b' && text_window_index > 0) {
-        DrawTextCursor(false);
-        --text_window_index;
-        FillRectangle(*text_window->InnerDrawer(), pos(),
-                      {kFontHorizonPixels, kFontVerticalPixels},
-                      ToColor(0xffffff));
-        DrawTextCursor(true);
-    } else if (c >= ' ' && text_window_index < max_chars) {
-        DrawTextCursor(false);
-        WriteAscii(*text_window->InnerDrawer(), pos(), c, ToColor(0));
-        ++text_window_index;
-        DrawTextCursor(true);
-    }
-
-    layer_manager->Draw(text_window_layer_id);
-}
-
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
 extern "C" void KernelMainNewStack(
@@ -140,10 +70,6 @@ extern "C" void KernelMainNewStack(
 
     InitializeLayer();
 
-    InitializeMainWindow();
-
-    InitializeTextWindow();
-
     layer_manager->Draw({{0, 0}, ScreenSize()});
 
     acpi::Initialize(acpi_table);
@@ -152,7 +78,6 @@ extern "C" void KernelMainNewStack(
     const int kTextboxCursorTimer = 1;
     const int kTimer05Sec = static_cast<int>(kTimerFreq * 0.5);
     timer_manager->AddTimer(Timer{kTimer05Sec, kTextboxCursorTimer, 1});
-    bool textbox_cursor_visible = false;
 
     InitializeSysCall();
 
@@ -165,19 +90,7 @@ extern "C" void KernelMainNewStack(
 
     task_manager->NewTask().InitContext(TaskTerminal, 0).Wakeup().ID();
 
-    char str[128];
-
     while (true) {
-        __asm__("cli");
-        const auto tick = timer_manager->CurrentTick();
-        __asm__("sti");
-
-        sprintf(str, "%010lu", tick);
-        FillRectangle(*main_window->InnerDrawer(), {20, 4}, {8 * 10, 16},
-                      {0xc6, 0xc6, 0xc6});
-        WriteString(*main_window->InnerDrawer(), {20, 4}, str, {0, 0, 0});
-        layer_manager->Draw(main_window_layer_id);
-
         __asm__("cli");
         auto msg = main_task.ReceiveMessage();
         if (!msg) {
@@ -193,25 +106,11 @@ extern "C" void KernelMainNewStack(
                 usb::xhci::ProcessEvents();
                 break;
             case Message::kTimerTimeout:
-                if (msg->arg.timer.value == kTextboxCursorTimer) {
-                    __asm__("cli");
-                    timer_manager->AddTimer(
-                        Timer{msg->arg.timer.timeout + kTimer05Sec,
-                              kTextboxCursorTimer, 1});
-                    __asm__("sti");
-                    textbox_cursor_visible = !textbox_cursor_visible;
-                    DrawTextCursor(textbox_cursor_visible);
-                    layer_manager->Draw(text_window_layer_id);
-                }
                 break;
             case Message::kKeyPush:
                 if (auto act = active_layer->GetActiveLayer();
-                    act == text_window_layer_id) {
-                    if (msg->arg.keyboard.press) {
-                        InputTextWindow(msg->arg.keyboard.ascii);
-                    }
-                } else if (msg->arg.keyboard.press &&
-                           msg->arg.keyboard.keycode == 20) {
+                    msg->arg.keyboard.press &&
+                    msg->arg.keyboard.keycode == 20) {
                     task_manager->NewTask()
                         .InitContext(TaskTerminal, 0)
                         .Wakeup();
