@@ -17,7 +17,25 @@ const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
     "@....@@.@      ", "@...@ @.@      ", "@..@   @.@     ", "@.@    @.@     ",
     "@@      @.@    ", "@       @.@    ", "         @.@   ", "         @@@   ",
 };
-}  // namespace
+
+std::tuple<Layer *, uint64_t> FindActiveLayerTask() {
+    const auto act = active_layer->GetActiveLayer();
+    if (!act) {
+        return {nullptr, 0};
+    }
+
+    const auto layer = layer_manager->FindLayer(act);
+    if (!layer) {
+        return {nullptr, 0};
+    }
+
+    const auto task_it = layer_task_map->find(act);
+    if (task_it == layer_task_map->end()) {
+        return {nullptr, 0};
+    }
+
+    return {layer, task_it->second};
+}
 
 void SendMouseMessage(Vector2D<int> new_pos, Vector2D<int> posdiff,
                       uint8_t buttons, uint8_t previous_buttons) {
@@ -60,6 +78,18 @@ void SendMouseMessage(Vector2D<int> new_pos, Vector2D<int> posdiff,
     }
 }
 
+void SendCloseMessage() {
+    const auto [layer, task_id] = FindActiveLayerTask();
+    if (!layer || !task_id) {
+        return;
+    }
+
+    Message msg{Message::KWindowClose};
+    msg.arg.window_close.layer_id = layer->ID();
+    task_manager->SendMessage(task_id, msg);
+}
+}  // namespace
+
 void DrawMouseCursor(ScreenDrawer *drawer, Vector2D<int> pos) {
     for (int dy = 0; dy < kMouseCursorHeight; ++dy) {
         for (int dx = 0; dx < kMouseCursorWidth; ++dx) {
@@ -92,16 +122,26 @@ void Mouse::OnInterrupt(uint8_t buttons, int8_t displacement_x,
     layer_manager->Move(layer_id_, position_);
     const auto pos_diff = position_ - old_pos;
 
+    unsigned int close_layer_id = 0;
+
     const bool previous_left_pressed = (previous_buttons_ & 0x01);
     const bool left_pressed = (buttons & 0x01);
 
     if (!previous_left_pressed && left_pressed) {
         auto layer = layer_manager->FindLayerByPoisition(position_, layer_id_);
         if (layer && layer->IsDraggable()) {
-            const auto y_layer = position_.y - layer->GetPosition().y;
-            if (y_layer < ToplevelWindow::kTopLeftMargin.y) {
-                drag_layer_id_ = layer->ID();
+            const auto pos_layer = position_ - layer->GetPosition();
+            switch (layer->GetWindow()->GetWindowRegion(pos_layer)) {
+                case WindowRegion::kTitleBar:
+                    drag_layer_id_ = layer->ID();
+                    break;
+                case WindowRegion::kCloseButton:
+                    close_layer_id = layer->ID();
+                    break;
+                default:
+                    break;
             }
+
             active_layer->Activate(layer->ID());
         } else {
             active_layer->Activate(0);
@@ -115,7 +155,11 @@ void Mouse::OnInterrupt(uint8_t buttons, int8_t displacement_x,
     }
 
     if (drag_layer_id_ == 0) {
-        SendMouseMessage(position_, pos_diff, buttons, previous_buttons_);
+        if (close_layer_id == 0) {
+            SendMouseMessage(position_, pos_diff, buttons, previous_buttons_);
+        } else {
+            SendCloseMessage();
+        }
     }
 
     previous_buttons_ = buttons;

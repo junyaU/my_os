@@ -4,6 +4,16 @@
 #include "logger.hpp"
 
 namespace {
+const int kCloseButtonWidth = 16;
+const int kCloseButtonHeight = 14;
+const char close_button[kCloseButtonHeight][kCloseButtonWidth + 1] = {
+    "...............@", ".:::::::::::::$@", ".:::::::::::::$@",
+    ".:::@@::::@@::$@", ".::::@@::@@:::$@", ".:::::@@@@::::$@",
+    ".::::::@@:::::$@", ".:::::@@@@::::$@", ".::::@@::@@:::$@",
+    ".:::@@::::@@::$@", ".:::::::::::::$@", ".:::::::::::::$@",
+    ".$$$$$$$$$$$$$$@", "@@@@@@@@@@@@@@@@",
+};
+
 void DrawTextbox(ScreenDrawer& drawer, Vector2D<int> pos, Vector2D<int> size,
                  const PixelColor& background, const PixelColor& border_light,
                  const PixelColor& border_dark) {
@@ -90,6 +100,10 @@ void Window::Move(Vector2D<int> dst_pos, const Rectangle<int>& src) {
     shadow_buffer_.Move(dst_pos, src);
 }
 
+WindowRegion Window::GetWindowRegion(Vector2D<int> pos) {
+    return WindowRegion::kOther;
+}
+
 ToplevelWindow::ToplevelWindow(int width, int height, PixelFormat shadow_format,
                                const std::string& title)
     : Window{width, height, shadow_format}, title_{title} {
@@ -106,22 +120,25 @@ void ToplevelWindow::Deactivate() {
     DrawWindowTitle(*Drawer(), title_.c_str(), false);
 }
 
+WindowRegion ToplevelWindow::GetWindowRegion(Vector2D<int> pos) {
+    if (pos.x < 2 || Width() - 2 <= pos.x || pos.y < 2 ||
+        Height() - 2 <= pos.y) {
+        return WindowRegion::kBorder;
+    } else if (pos.y < kTopLeftMargin.y) {
+        if (Width() - 5 - kCloseButtonWidth <= pos.x && pos.x < Width() - 5 &&
+            5 <= pos.y && pos.y < 5 + kCloseButtonHeight) {
+            return WindowRegion::kCloseButton;
+        }
+
+        return WindowRegion::kTitleBar;
+    }
+
+    return WindowRegion::kOther;
+}
+
 Vector2D<int> ToplevelWindow::InnerSize() const {
     return Size() - kTopLeftMargin - kBottomRightMargin;
 }
-
-namespace {
-const int kCloseButtonWidth = 16;
-const int kCloseButtonHeight = 14;
-const char close_button[kCloseButtonHeight][kCloseButtonWidth + 1] = {
-    "...............@", ".:::::::::::::$@", ".:::::::::::::$@",
-    ".:::@@::::@@::$@", ".::::@@::@@:::$@", ".:::::@@@@::::$@",
-    ".::::::@@:::::$@", ".:::::@@@@::::$@", ".::::@@::@@:::$@",
-    ".:::@@::::@@::$@", ".:::::::::::::$@", ".:::::::::::::$@",
-    ".$$$$$$$$$$$$$$@", "@@@@@@@@@@@@@@@@",
-};
-
-}  // namespace
 
 void DrawWindow(ScreenDrawer& drawer, const char* title) {
     auto fill_rect = [&drawer](Vector2D<int> pos, Vector2D<int> size,

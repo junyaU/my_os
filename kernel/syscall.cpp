@@ -286,6 +286,11 @@ SYSCALL(ReadEvent) {
                 }
                 break;
 
+            case Message::KWindowClose:
+                app_events[i].type = AppEvent::kQuit;
+                i++;
+                break;
+
             default:
                 break;
         }
