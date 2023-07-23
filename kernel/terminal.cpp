@@ -564,6 +564,8 @@ void Terminal::ExecuteLine() {
                                       reinterpret_cast<int64_t>(terminal_d))
                          .Wakeup()
                          .ID();
+
+        (*layer_task_map)[layer_id_] = subtask_id;
     }
 
     if (strcmp(command, "echo") == 0) {
@@ -678,6 +680,7 @@ void Terminal::ExecuteLine() {
         pipe_fd->FinishWrite();
         __asm__("cli");
         auto [error_code, err] = task_manager->WaitFinish(subtask_id);
+        (*layer_task_map)[layer_id_] = task_.ID();
         __asm__("sti");
 
         if (err) {
