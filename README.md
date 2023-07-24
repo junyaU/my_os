@@ -1,1 +1,1 @@
-## It's a learning os
+this is an operating system built on the foundation of MikanOS.
